@@ -1,0 +1,26 @@
+{
+  "extends": "@vue/tsconfig/tsconfig.dom.json",
+  "include": [
+    "env.d.ts",
+    "main.ts",
+    "router.ts",
+    "App.vue",
+    "components/**/*.ts",
+    "components/**/*.vue",
+    "stores/**/*.ts",
+    "layouts/**/*.ts",
+    "layouts/**/*.vue",
+    "pages/**/*.ts",
+    "pages/**/*.vue",
+    "utils/**/*.ts",
+    "core/**/*.ts"
+  ],
+  "exclude": ["test/**/*", "node_modules", "dist"],
+  "compilerOptions": {
+    "noUncheckedIndexedAccess": true,
+    "paths": {
+      "@/*": ["./*"]
+    },
+    "tsBuildInfoFile": "./node_modules/.tmp/tsconfig.app.tsbuildinfo"
+  }
+}
