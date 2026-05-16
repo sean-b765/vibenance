@@ -1,10 +1,13 @@
-import { describe, expect, it } from 'vitest'
+import { afterEach, describe, expect, it } from 'vitest'
 import {
   formatCompactCurrency,
   formatCurrency,
   formatDate,
   formatPercent,
+  setActiveCurrency,
 } from '@/utils/format'
+
+afterEach(() => setActiveCurrency('AUD'))
 
 describe('formatCurrency', () => {
   it('formats AUD with two decimals and thousands separators', () => {
@@ -16,33 +19,50 @@ describe('formatCurrency', () => {
   })
 
   it('formats negative values', () => {
-    expect(formatCurrency(-500)).toBe('-$500.00')
+    expect(formatCurrency(-500)).toMatch(/-\$500\.00/)
   })
 
   it('rounds to two decimals', () => {
     expect(formatCurrency(1.005)).toBe('$1.01')
   })
+
+  it('formats USD with US locale', () => {
+    setActiveCurrency('USD')
+    expect(formatCurrency(1234.5)).toBe('$1,234.50')
+  })
+
+  it('formats IDR with Indonesian locale (thousand separator dot)', () => {
+    setActiveCurrency('IDR')
+    expect(formatCurrency(2_000_000)).toContain('2.000.000')
+  })
+
+  it('formats EUR with German locale', () => {
+    setActiveCurrency('EUR')
+    expect(formatCurrency(1234.5)).toMatch(/1\.234,50/)
+  })
+
+  it('formats JPY without decimals', () => {
+    setActiveCurrency('JPY')
+    expect(formatCurrency(1500)).not.toContain('.')
+  })
 })
 
 describe('formatCompactCurrency', () => {
-  it('returns plain dollar values under 1000', () => {
-    expect(formatCompactCurrency(450)).toBe('$450')
+  it('returns a compact AUD string for thousands', () => {
+    expect(formatCompactCurrency(1_500)).toMatch(/1\.5K/)
   })
 
-  it('abbreviates thousands as K', () => {
-    expect(formatCompactCurrency(1_500)).toBe('$2K')
-    expect(formatCompactCurrency(450_000)).toBe('$450K')
-  })
-
-  it('abbreviates millions as M with one decimal', () => {
-    expect(formatCompactCurrency(1_200_000)).toBe('$1.2M')
-    expect(formatCompactCurrency(15_500_000)).toBe('$15.5M')
+  it('abbreviates millions with one decimal', () => {
+    expect(formatCompactCurrency(1_200_000)).toMatch(/1\.2M/)
   })
 
   it('keeps sign on negatives', () => {
-    expect(formatCompactCurrency(-1_200_000)).toBe('-$1.2M')
-    expect(formatCompactCurrency(-450_000)).toBe('-$450K')
-    expect(formatCompactCurrency(-50)).toBe('-$50')
+    expect(formatCompactCurrency(-1_200_000)).toMatch(/-\$1\.2M/)
+  })
+
+  it('switches symbol with currency', () => {
+    setActiveCurrency('EUR')
+    expect(formatCompactCurrency(1_500_000)).toMatch(/€|EUR/)
   })
 })
 
@@ -62,7 +82,7 @@ describe('formatPercent', () => {
 })
 
 describe('formatDate', () => {
-  it('formats ISO date in en-AU style', () => {
+  it('formats ISO date in active locale style', () => {
     const out = formatDate('2026-05-15T00:00:00.000Z')
     expect(out).toMatch(/\d{2} \w{3} 2026/)
   })

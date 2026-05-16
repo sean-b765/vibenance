@@ -16,6 +16,9 @@ export const useSettingsStore = defineStore('settings', () => {
   const setInflationRate = (rate: number) => {
     settings.value.inflationRate = rate
   }
+  const setCurrency = (currency: string) => {
+    settings.value.currency = currency
+  }
   const reset = () => {
     settings.value = defaultSettings()
   }
@@ -39,5 +42,5 @@ export const useSettingsStore = defineStore('settings', () => {
     settings.value = next
   }
 
-  return { settings, setInflationRate, reset, replaceAll, enablePersistence }
+  return { settings, setInflationRate, setCurrency, reset, replaceAll, enablePersistence }
 })
