@@ -34,9 +34,11 @@ export const useScenariosStore = defineStore('scenarios', () => {
   const scenarios = ref<Scenario[]>([])
   const activeScenarioId = ref<string | null>(null)
 
-  const activeScenario = computed(() =>
-    scenarios.value.find((s) => s.id === activeScenarioId.value) ?? null,
-  )
+  const activeScenario = computed(() => {
+    const explicit = scenarios.value.find((s) => s.id === activeScenarioId.value)
+    if (explicit) return explicit
+    return scenarios.value[0] ?? null
+  })
   const favourites = computed(() => scenarios.value.filter((s) => s.favourite))
   const hasData = computed(() => scenarios.value.length > 0)
 

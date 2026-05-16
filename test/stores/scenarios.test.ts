@@ -40,6 +40,29 @@ describe('scenarios store', () => {
     expect(s.entities.assets).toEqual([])
   })
 
+  it('create does not change activeScenarioId', () => {
+    const store = useScenariosStore()
+    expect(store.activeScenarioId).toBeNull()
+    store.create('First')
+    expect(store.activeScenarioId).toBeNull()
+  })
+
+  it('activeScenario falls back to the first scenario when none explicitly selected', () => {
+    const store = useScenariosStore()
+    const a = store.create('A')
+    store.create('B')
+    expect(store.activeScenarioId).toBeNull()
+    expect(store.activeScenario?.id).toBe(a.id)
+  })
+
+  it('activeScenario follows explicit selection over fallback', () => {
+    const store = useScenariosStore()
+    store.create('A')
+    const b = store.create('B')
+    store.setActive(b.id)
+    expect(store.activeScenario?.id).toBe(b.id)
+  })
+
   it('duplicate creates an independent copy with a fresh id and "(copy)" suffix', () => {
     const store = useScenariosStore()
     store.loadSampleData()
