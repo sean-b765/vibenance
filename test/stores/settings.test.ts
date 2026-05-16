@@ -11,17 +11,8 @@ describe('settings store', () => {
     const store = useSettingsStore()
     expect(store.settings.currency).toBe('AUD')
     expect(store.settings.inflationRate).toBe(0.025)
-    expect(store.settings.theme).toBe('system')
     expect(store.settings.taxConfig.jurisdiction).toBe('AU')
     expect(store.settings.taxConfig.brackets.length).toBeGreaterThan(0)
-  })
-
-  it('setTheme updates theme preference', () => {
-    const store = useSettingsStore()
-    store.setTheme('dark')
-    expect(store.settings.theme).toBe('dark')
-    store.setTheme('light')
-    expect(store.settings.theme).toBe('light')
   })
 
   it('setInflationRate updates rate', () => {
@@ -32,10 +23,8 @@ describe('settings store', () => {
 
   it('reset restores defaults', () => {
     const store = useSettingsStore()
-    store.setTheme('dark')
     store.setInflationRate(0.1)
     store.reset()
-    expect(store.settings.theme).toBe('system')
     expect(store.settings.inflationRate).toBe(0.025)
   })
 })

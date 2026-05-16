@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { useColorMode, type BasicColorSchema } from '@vueuse/core'
 import { ref } from 'vue'
 import ConfirmationDialog from '@/components/ConfirmationDialog.vue'
 import AppSelect from '@/components/forms/AppSelect.vue'
@@ -6,21 +7,21 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import type { ThemePreference } from '@/core/schemas/settings'
 import { useScenariosStore } from '@/stores/scenarios'
 import { useSettingsStore } from '@/stores/settings'
 
 const settingsStore = useSettingsStore()
 const scenarios = useScenariosStore()
+const mode = useColorMode()
 
-const themeOptions: { value: ThemePreference; label: string }[] = [
-  { value: 'system', label: 'System' },
+const themeOptions: { value: BasicColorSchema; label: string }[] = [
+  { value: 'auto', label: 'System' },
   { value: 'light', label: 'Light' },
   { value: 'dark', label: 'Dark' },
 ]
 
-const onTheme = (v: ThemePreference | '') => {
-  if (v) settingsStore.setTheme(v)
+const onTheme = (v: BasicColorSchema | '') => {
+  if (v) mode.value = v
 }
 
 const resetOpen = ref(false)
@@ -38,7 +39,7 @@ const confirmReset = () => scenarios.reset()
       <CardContent class="space-y-4">
         <div class="space-y-1">
           <Label>Theme</Label>
-          <AppSelect :model-value="settingsStore.settings.theme" :options="themeOptions" @update:model-value="onTheme" />
+          <AppSelect :model-value="mode" :options="themeOptions" @update:model-value="onTheme" />
         </div>
         <div class="space-y-1">
           <Label>Inflation rate</Label>

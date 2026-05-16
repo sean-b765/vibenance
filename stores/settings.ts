@@ -2,21 +2,17 @@ import { defineStore } from 'pinia'
 import { ref, watch } from 'vue'
 import auTax from '@/config/tax/au-2026.json'
 import { loadKv, saveKv } from '@/core/db'
-import type { Settings, ThemePreference } from '@/core/schemas/settings'
+import type { Settings } from '@/core/schemas/settings'
 
 const defaultSettings = (): Settings => ({
   currency: 'AUD',
   inflationRate: 0.025,
   taxConfig: auTax as Settings['taxConfig'],
-  theme: 'system',
 })
 
 export const useSettingsStore = defineStore('settings', () => {
   const settings = ref<Settings>(defaultSettings())
 
-  const setTheme = (theme: ThemePreference) => {
-    settings.value.theme = theme
-  }
   const setInflationRate = (rate: number) => {
     settings.value.inflationRate = rate
   }
@@ -39,5 +35,5 @@ export const useSettingsStore = defineStore('settings', () => {
     )
   }
 
-  return { settings, setTheme, setInflationRate, reset, enablePersistence }
+  return { settings, setInflationRate, reset, enablePersistence }
 })
