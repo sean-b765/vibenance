@@ -1,6 +1,7 @@
 import { defineStore } from 'pinia'
-import { ref } from 'vue'
+import { ref, watch } from 'vue'
 import auTax from '@/config/tax/au-2026.json'
+import { loadKv, saveKv } from '@/core/db'
 import type { Settings, ThemePreference } from '@/core/schemas/settings'
 
 const defaultSettings = (): Settings => ({
@@ -23,5 +24,20 @@ export const useSettingsStore = defineStore('settings', () => {
     settings.value = defaultSettings()
   }
 
-  return { settings, setTheme, setInflationRate, reset }
+  let persistenceEnabled = false
+  const enablePersistence = async () => {
+    if (persistenceEnabled) return
+    persistenceEnabled = true
+    const stored = await loadKv<Settings>('settings')
+    if (stored) settings.value = stored
+    watch(
+      settings,
+      (v) => {
+        void saveKv('settings', JSON.parse(JSON.stringify(v)))
+      },
+      { deep: true },
+    )
+  }
+
+  return { settings, setTheme, setInflationRate, reset, enablePersistence }
 })

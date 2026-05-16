@@ -1,6 +1,7 @@
 import { defineStore } from 'pinia'
-import { computed, ref } from 'vue'
+import { computed, ref, watch } from 'vue'
 import { uuidv7 } from 'uuidv7'
+import { loadKv, saveKv } from '@/core/db'
 import type { Asset } from '@/core/schemas/asset'
 import type { Expense } from '@/core/schemas/expense'
 import type { Income } from '@/core/schemas/income'
@@ -105,6 +106,26 @@ export const useScenariosStore = defineStore('scenarios', () => {
   const reset = () => {
     scenarios.value = []
     activeScenarioId.value = null
+  }
+
+  let persistenceEnabled = false
+  const enablePersistence = async () => {
+    if (persistenceEnabled) return
+    persistenceEnabled = true
+    const stored = await loadKv<Scenario[]>('scenarios')
+    if (stored) scenarios.value = stored
+    const active = await loadKv<string | null>('activeScenarioId')
+    if (active !== undefined) activeScenarioId.value = active
+    watch(
+      scenarios,
+      (v) => {
+        void saveKv('scenarios', JSON.parse(JSON.stringify(v)))
+      },
+      { deep: true },
+    )
+    watch(activeScenarioId, (v) => {
+      void saveKv('activeScenarioId', v)
+    })
   }
 
   const scenarioById = (id: string) => scenarios.value.find((s) => s.id === id)
@@ -232,5 +253,6 @@ export const useScenariosStore = defineStore('scenarios', () => {
     appendSnapshot,
     moveEntity,
     cloneEntity,
+    enablePersistence,
   }
 })

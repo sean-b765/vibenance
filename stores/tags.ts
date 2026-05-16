@@ -1,6 +1,7 @@
 import { defineStore } from 'pinia'
-import { ref } from 'vue'
+import { ref, watch } from 'vue'
 import { uuidv7 } from 'uuidv7'
+import { loadKv, saveKv } from '@/core/db'
 import type { Tag } from '@/core/schemas/tag'
 import { systemTags } from '@/utils/sampleData'
 
@@ -23,5 +24,20 @@ export const useTagsStore = defineStore('tags', () => {
     tags.value = tags.value.filter((t) => t.id !== id)
   }
 
-  return { tags, add, rename, remove }
+  let persistenceEnabled = false
+  const enablePersistence = async () => {
+    if (persistenceEnabled) return
+    persistenceEnabled = true
+    const stored = await loadKv<Tag[]>('tags')
+    if (stored && stored.length > 0) tags.value = stored
+    watch(
+      tags,
+      (v) => {
+        void saveKv('tags', JSON.parse(JSON.stringify(v)))
+      },
+      { deep: true },
+    )
+  }
+
+  return { tags, add, rename, remove, enablePersistence }
 })

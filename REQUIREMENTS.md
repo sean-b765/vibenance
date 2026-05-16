@@ -474,10 +474,4 @@ Out (post-MVP):
 
 ## 12. Open Questions / Future Considerations
 
-- How to model salary sacrifice / employer super contributions if/when Super entity is added.
 - How to handle cash flows that fall on weekends or public holidays (currently ignored; flow occurs on configured day regardless).
-- Whether to add an in-app "recompute now" indicator if projections become slow at extreme horizons (>50 years).
-
-## Missing
-
-cash flows, offset linking, tax, inflation toggle.
