@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import { Eye, EyeOff } from 'lucide-vue-next'
-import { computed, ref } from 'vue'
+import { Check, Eye, EyeOff, Pencil, X } from 'lucide-vue-next'
+import { computed, nextTick, ref } from 'vue'
 import { useRoute } from 'vue-router'
 import AppSelect from '@/components/forms/AppSelect.vue'
 import NetWorthChart from '@/components/NetWorthChart.vue'
@@ -153,6 +153,35 @@ const incomeTotal = computed(() =>
         .reduce((s, i) => s + annualised(i.amount, i.frequency?.kind ?? null), 0)
     : 0,
 )
+const isEditingName = ref(false)
+const nameDraft = ref('')
+const nameInput = ref<HTMLInputElement | null>(null)
+
+const startEditName = async () => {
+  if (!scenario.value) return
+  nameDraft.value = scenario.value.name
+  isEditingName.value = true
+  await nextTick()
+  nameInput.value?.focus()
+  nameInput.value?.select()
+}
+const commitName = () => {
+  if (!scenario.value) return
+  const trimmed = nameDraft.value.trim()
+  if (trimmed && trimmed !== scenario.value.name) {
+    scenarios.rename(scenario.value.id, trimmed)
+  }
+  isEditingName.value = false
+}
+const cancelName = () => {
+  isEditingName.value = false
+}
+const onColourChange = (e: Event) => {
+  if (!scenario.value) return
+  const value = (e.target as HTMLInputElement).value
+  scenarios.setColour(scenario.value.id, value)
+}
+
 const expenseTotal = computed(() =>
   scenario.value
     ? scenario.value.entities.expenses
@@ -167,8 +196,42 @@ const expenseTotal = computed(() =>
 
   <div v-else class="space-y-6">
     <header class="flex items-center gap-3">
-      <span class="w-4 h-4 rounded-full" :style="{ background: scenario.colour }" />
-      <h2 class="text-2xl font-semibold">{{ scenario.name }}</h2>
+      <label class="relative cursor-pointer" title="Change colour">
+        <span class="block w-5 h-5 rounded-full border border-neutral-300" :style="{ background: scenario.colour }" />
+        <input
+          type="color"
+          class="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+          :value="scenario.colour"
+          @input="onColourChange"
+        />
+      </label>
+      <template v-if="!isEditingName">
+        <h2 class="text-2xl font-semibold">{{ scenario.name }}</h2>
+        <button
+          type="button"
+          class="text-muted-foreground hover:text-foreground"
+          title="Rename"
+          @click="startEditName"
+        >
+          <Pencil class="size-4" />
+        </button>
+      </template>
+      <template v-else>
+        <input
+          ref="nameInput"
+          v-model="nameDraft"
+          class="text-2xl font-semibold bg-transparent border-b border-neutral-300 focus:outline-none focus:border-primary px-1"
+          @keydown.enter="commitName"
+          @keydown.esc="cancelName"
+          @blur="commitName"
+        />
+        <button type="button" class="text-emerald-600 hover:text-emerald-700" title="Save" @mousedown.prevent="commitName">
+          <Check class="size-4" />
+        </button>
+        <button type="button" class="text-muted-foreground hover:text-foreground" title="Cancel" @mousedown.prevent="cancelName">
+          <X class="size-4" />
+        </button>
+      </template>
     </header>
 
     <section class="p-6 bg-white rounded border border-neutral-200">
