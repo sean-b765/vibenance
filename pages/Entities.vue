@@ -127,7 +127,7 @@ const submitSnapshot = (kind: 'assets' | 'liabilities', id: string) => {
         <div class="min-w-[220px]">
           <AppSelect
             :model-value="scenarioId ?? ''"
-            :options="scenarios.scenarios.map((s) => ({ value: s.id, label: s.name }))"
+            :options="scenarios.scenarios.map((s) => ({ value: s.id, label: s.name, colour: s.colour }))"
             placeholder="Scenario"
             @update:model-value="(v) => v && scenarios.setActive(String(v))"
           />

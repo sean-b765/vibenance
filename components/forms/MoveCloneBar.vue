@@ -16,7 +16,9 @@ const target = ref<string | ''>('')
 const targets = computed(() =>
   scenarios.scenarios.filter((s) => s.id !== props.fromScenarioId),
 )
-const targetOptions = computed(() => targets.value.map((s) => ({ value: s.id, label: s.name })))
+const targetOptions = computed(() =>
+  targets.value.map((s) => ({ value: s.id, label: s.name, colour: s.colour })),
+)
 
 const move = () => {
   if (!target.value) return
