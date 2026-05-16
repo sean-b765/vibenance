@@ -1,7 +1,10 @@
 <script setup lang="ts">
-import { reactive, ref, watch } from 'vue'
+import { computed, reactive, ref, watch } from 'vue'
 import { uuidv7 } from 'uuidv7'
+import AppSelect from '@/components/forms/AppSelect.vue'
 import FormRow from '@/components/forms/FormRow.vue'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
 import type { Asset } from '@/core/schemas/asset'
 import type { FrequencyKind } from '@/core/schemas/frequency'
 import { liabilitySchema, type Liability, type LiabilityType } from '@/core/schemas/liability'
@@ -20,6 +23,14 @@ const emit = defineEmits<{
 
 const liabilityTypes: LiabilityType[] = ['mortgage', 'personal_loan', 'credit_card', 'car_loan']
 const frequencies: FrequencyKind[] = ['daily', 'weekly', 'fortnightly', 'monthly', 'annually']
+
+const liabilityTypeOptions = liabilityTypes.map((t) => ({ value: t, label: t }))
+const growthTypeOptions: { value: 'simple' | 'compounding'; label: string }[] = [
+  { value: 'simple', label: 'simple' },
+  { value: 'compounding', label: 'compounding' },
+]
+const frequencyOptions = frequencies.map((f) => ({ value: f, label: f }))
+const assetOptions = computed(() => props.assets.map((a) => ({ value: a.id, label: a.name })))
 
 type FormState = {
   id: string
@@ -123,78 +134,69 @@ const save = () => {
 
 <template>
   <form
-    class="grid grid-cols-1 md:grid-cols-2 gap-4 p-4 bg-neutral-50 rounded border border-neutral-200"
+    class="grid grid-cols-1 md:grid-cols-2 gap-4 p-4 bg-muted/40 rounded-md border"
     @submit.prevent="save"
   >
     <FormRow label="Name">
-      <input v-model="state.name" required class="border border-neutral-300 rounded px-2 py-1" />
+      <Input v-model="state.name" required />
     </FormRow>
     <FormRow label="Type">
-      <select v-model="state.type" class="border border-neutral-300 rounded px-2 py-1">
-        <option v-for="t in liabilityTypes" :key="t" :value="t">{{ t }}</option>
-      </select>
+      <AppSelect v-model="state.type" :options="liabilityTypeOptions" />
     </FormRow>
     <FormRow label="Start date">
-      <input v-model="state.startDate" type="date" class="border border-neutral-300 rounded px-2 py-1" />
+      <Input v-model="state.startDate" type="date" />
     </FormRow>
     <FormRow label="End date (optional)">
-      <input v-model="state.endDate" type="date" class="border border-neutral-300 rounded px-2 py-1" />
+      <Input v-model="state.endDate" type="date" />
     </FormRow>
     <FormRow v-if="!props.liability" label="Initial balance">
-      <input v-model.number="state.initialBalance" type="number" step="0.01" class="border border-neutral-300 rounded px-2 py-1" />
+      <Input v-model.number="state.initialBalance" type="number" step="0.01" />
     </FormRow>
     <FormRow label="Interest type">
-      <select v-model="state.growthType" class="border border-neutral-300 rounded px-2 py-1">
-        <option value="simple">simple</option>
-        <option value="compounding">compounding</option>
-      </select>
+      <AppSelect v-model="state.growthType" :options="growthTypeOptions" />
     </FormRow>
     <FormRow label="Annual rate">
-      <input v-model.number="state.rate" type="number" step="0.0001" class="border border-neutral-300 rounded px-2 py-1" />
+      <Input v-model.number="state.rate" type="number" step="0.0001" />
     </FormRow>
     <FormRow v-if="state.growthType === 'compounding'" label="Compounding frequency">
-      <select v-model="state.compoundingFrequency" class="border border-neutral-300 rounded px-2 py-1">
-        <option v-for="f in frequencies" :key="f" :value="f">{{ f }}</option>
-      </select>
+      <AppSelect v-model="state.compoundingFrequency" :options="frequencyOptions" />
     </FormRow>
     <FormRow label="Repayment amount">
-      <input v-model.number="state.repayment" type="number" step="0.01" class="border border-neutral-300 rounded px-2 py-1" />
+      <Input v-model.number="state.repayment" type="number" step="0.01" />
     </FormRow>
     <FormRow label="Repayment frequency">
-      <select v-model="state.paymentFrequency" class="border border-neutral-300 rounded px-2 py-1">
-        <option v-for="f in frequencies" :key="f" :value="f">{{ f }}</option>
-      </select>
+      <AppSelect v-model="state.paymentFrequency" :options="frequencyOptions" />
     </FormRow>
     <FormRow label="Source account">
-      <select v-model="state.sourceAccountId" required class="border border-neutral-300 rounded px-2 py-1">
-        <option value="">— select —</option>
-        <option v-for="a in props.assets" :key="a.id" :value="a.id">{{ a.name }}</option>
-      </select>
+      <AppSelect
+        v-model="state.sourceAccountId"
+        :options="assetOptions"
+        placeholder="— select —"
+      />
     </FormRow>
     <template v-if="state.type === 'credit_card'">
       <FormRow label="Grace period (days)">
-        <input v-model.number="state.creditCardGracePeriodDays" type="number" min="0" class="border border-neutral-300 rounded px-2 py-1" />
+        <Input v-model.number="state.creditCardGracePeriodDays" type="number" min="0" />
       </FormRow>
       <FormRow label="Revolving">
-        <input v-model="state.creditCardRevolving" type="checkbox" class="self-start" />
+        <input v-model="state.creditCardRevolving" type="checkbox" class="self-start size-4" />
       </FormRow>
     </template>
 
-    <div v-if="error" class="md:col-span-2 text-sm text-red-600">{{ error }}</div>
+    <div v-if="error" class="md:col-span-2 text-sm text-destructive">{{ error }}</div>
 
-    <div class="md:col-span-2 flex gap-2 justify-end pt-2 border-t border-neutral-200">
-      <button
+    <div class="md:col-span-2 flex gap-2 justify-end pt-2 border-t">
+      <Button
         v-if="props.liability"
         type="button"
-        class="px-3 py-1 rounded text-sm border border-red-300 text-red-700 hover:bg-red-50"
+        variant="destructive"
+        size="sm"
         @click="emit('delete', props.liability.id)"
       >
         Delete
-      </button>
-      <button type="button" class="px-3 py-1 rounded text-sm border border-neutral-300 hover:bg-neutral-100" @click="emit('cancel')">
-        Cancel
-      </button>
-      <button type="submit" class="px-3 py-1 rounded text-sm bg-blue-600 text-white hover:bg-blue-700">Save</button>
+      </Button>
+      <Button type="button" variant="outline" size="sm" @click="emit('cancel')">Cancel</Button>
+      <Button type="submit" size="sm">Save</Button>
     </div>
   </form>
 </template>

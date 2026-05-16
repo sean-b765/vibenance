@@ -1,5 +1,7 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
+import AppSelect from '@/components/forms/AppSelect.vue'
+import { Button } from '@/components/ui/button'
 import { useScenariosStore } from '@/stores/scenarios'
 
 const props = defineProps<{
@@ -9,11 +11,12 @@ const props = defineProps<{
 }>()
 
 const scenarios = useScenariosStore()
-const target = ref('')
+const target = ref<string | ''>('')
 
 const targets = computed(() =>
   scenarios.scenarios.filter((s) => s.id !== props.fromScenarioId),
 )
+const targetOptions = computed(() => targets.value.map((s) => ({ value: s.id, label: s.name })))
 
 const move = () => {
   if (!target.value) return
@@ -30,29 +33,13 @@ const clone = () => {
 <template>
   <div
     v-if="targets.length > 0"
-    class="flex items-center gap-2 p-3 bg-white rounded border border-neutral-200"
+    class="flex flex-wrap items-center gap-2 p-3 bg-card rounded-md border"
   >
-    <span class="text-xs uppercase text-neutral-500">Move/clone to</span>
-    <select
-      v-model="target"
-      class="border border-neutral-300 rounded px-2 py-1 text-sm flex-1"
-    >
-      <option value="">— select scenario —</option>
-      <option v-for="s in targets" :key="s.id" :value="s.id">{{ s.name }}</option>
-    </select>
-    <button
-      class="px-2 py-1 rounded text-xs border border-neutral-300 hover:bg-neutral-100 disabled:opacity-50"
-      :disabled="!target"
-      @click="clone"
-    >
-      Clone
-    </button>
-    <button
-      class="px-2 py-1 rounded text-xs border border-blue-300 text-blue-700 hover:bg-blue-50 disabled:opacity-50"
-      :disabled="!target"
-      @click="move"
-    >
-      Move
-    </button>
+    <span class="text-xs uppercase text-muted-foreground">Move/clone to</span>
+    <div class="flex-1 min-w-[180px]">
+      <AppSelect v-model="target" :options="targetOptions" placeholder="— select scenario —" />
+    </div>
+    <Button size="sm" variant="outline" :disabled="!target" @click="clone">Clone</Button>
+    <Button size="sm" :disabled="!target" @click="move">Move</Button>
   </div>
 </template>

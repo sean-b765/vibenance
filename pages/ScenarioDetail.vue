@@ -1,7 +1,9 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
 import { useRoute } from 'vue-router'
+import AppSelect from '@/components/forms/AppSelect.vue'
 import NetWorthChart from '@/components/NetWorthChart.vue'
+import { Button } from '@/components/ui/button'
 import type { BucketKind } from '@/core/engine/series'
 import { simulate } from '@/core/engine/simulation'
 import { useScenariosStore } from '@/stores/scenarios'
@@ -114,27 +116,33 @@ const liabilitySum = computed(() => liabilityRows.value.reduce((s, r) => s + r.v
       <div class="flex flex-wrap items-center justify-between gap-3 mb-4">
         <h3 class="font-medium">Net worth projection</h3>
         <div class="flex items-center gap-4 text-xs">
-          <label class="flex items-center gap-2">
-            Horizon
-            <select v-model.number="horizonYears" class="px-2 py-1 border border-neutral-300 rounded">
-              <option :value="1">1 yr</option>
-              <option :value="3">3 yr</option>
-              <option :value="5">5 yr</option>
-              <option :value="10">10 yr</option>
-              <option :value="20">20 yr</option>
-              <option :value="30">30 yr</option>
-            </select>
-          </label>
+          <div class="flex items-center gap-2">
+            <span>Horizon</span>
+            <div class="min-w-[100px]">
+              <AppSelect
+                :model-value="horizonYears"
+                :options="[
+                  { value: 1, label: '1 yr' },
+                  { value: 3, label: '3 yr' },
+                  { value: 5, label: '5 yr' },
+                  { value: 10, label: '10 yr' },
+                  { value: 20, label: '20 yr' },
+                  { value: 30, label: '30 yr' },
+                ]"
+                @update:model-value="(v) => horizonYears = Number(v) || 5"
+              />
+            </div>
+          </div>
           <div class="flex gap-1">
-            <button
+            <Button
               v-for="b in (['day', 'week', 'month'] as const)"
               :key="b"
-              class="px-2 py-1 rounded border"
-              :class="bucketKind === b ? 'bg-blue-600 text-white border-blue-600' : 'border-neutral-300'"
+              size="sm"
+              :variant="bucketKind === b ? 'default' : 'outline'"
               @click="bucketKind = b"
             >
               {{ b }}
-            </button>
+            </Button>
           </div>
         </div>
       </div>

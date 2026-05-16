@@ -1,82 +1,75 @@
 <script setup lang="ts">
+import AppSelect from '@/components/forms/AppSelect.vue'
+import { Button } from '@/components/ui/button'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import type { ThemePreference } from '@/core/schemas/settings'
 import { useScenariosStore } from '@/stores/scenarios'
 import { useSettingsStore } from '@/stores/settings'
 
 const settingsStore = useSettingsStore()
 const scenarios = useScenariosStore()
+
+const themeOptions: { value: ThemePreference; label: string }[] = [
+  { value: 'system', label: 'System' },
+  { value: 'light', label: 'Light' },
+  { value: 'dark', label: 'Dark' },
+]
+
+const onTheme = (v: ThemePreference | '') => {
+  if (v) settingsStore.setTheme(v)
+}
 </script>
 
 <template>
   <div class="space-y-6 max-w-2xl">
     <h2 class="text-2xl font-semibold">Settings</h2>
 
-    <section class="p-6 bg-white rounded border border-neutral-200 space-y-4">
-      <div>
-        <label class="block text-sm font-medium mb-1">Theme</label>
-        <select
-          :value="settingsStore.settings.theme"
-          class="px-3 py-2 border border-neutral-300 rounded text-sm w-full"
-          @change="settingsStore.setTheme(($event.target as HTMLSelectElement).value as 'system' | 'light' | 'dark')"
-        >
-          <option value="system">System</option>
-          <option value="light">Light</option>
-          <option value="dark">Dark</option>
-        </select>
-      </div>
-
-      <div>
-        <label class="block text-sm font-medium mb-1">Inflation rate</label>
-        <input
-          type="number"
-          step="0.001"
-          :value="settingsStore.settings.inflationRate"
-          class="px-3 py-2 border border-neutral-300 rounded text-sm w-full"
-          @input="settingsStore.setInflationRate(parseFloat(($event.target as HTMLInputElement).value))"
-        />
-      </div>
-
-      <div>
-        <label class="block text-sm font-medium mb-1">Currency</label>
-        <div class="text-sm text-neutral-600">{{ settingsStore.settings.currency }} (display only)</div>
-      </div>
-
-      <div>
-        <label class="block text-sm font-medium mb-1">Tax jurisdiction</label>
-        <div class="text-sm text-neutral-600">
-          {{ settingsStore.settings.taxConfig.jurisdiction }} —
-          {{ settingsStore.settings.taxConfig.year }}
+    <Card>
+      <CardHeader>
+        <CardTitle>Preferences</CardTitle>
+      </CardHeader>
+      <CardContent class="space-y-4">
+        <div class="space-y-1">
+          <Label>Theme</Label>
+          <AppSelect :model-value="settingsStore.settings.theme" :options="themeOptions" @update:model-value="onTheme" />
         </div>
-      </div>
-    </section>
+        <div class="space-y-1">
+          <Label>Inflation rate</Label>
+          <Input
+            type="number"
+            step="0.001"
+            :value="settingsStore.settings.inflationRate"
+            @input="settingsStore.setInflationRate(parseFloat(($event.target as HTMLInputElement).value))"
+          />
+        </div>
+        <div class="space-y-1">
+          <Label>Currency</Label>
+          <div class="text-sm text-muted-foreground">{{ settingsStore.settings.currency }} (display only)</div>
+        </div>
+        <div class="space-y-1">
+          <Label>Tax jurisdiction</Label>
+          <div class="text-sm text-muted-foreground">
+            {{ settingsStore.settings.taxConfig.jurisdiction }} —
+            {{ settingsStore.settings.taxConfig.year }}
+          </div>
+        </div>
+      </CardContent>
+    </Card>
 
-    <section class="p-6 bg-white rounded border border-neutral-200 space-y-3">
-      <h3 class="font-medium">Data</h3>
-      <div class="flex flex-wrap gap-2">
-        <button
-          class="px-4 py-2 rounded bg-blue-600 text-white text-sm hover:bg-blue-700"
-          @click="scenarios.loadSampleData()"
-        >
-          Load sample data
-        </button>
-        <button
-          class="px-4 py-2 rounded border border-neutral-300 text-sm hover:bg-neutral-100"
-          disabled
-        >
-          Export JSON
-        </button>
-        <button
-          class="px-4 py-2 rounded border border-neutral-300 text-sm hover:bg-neutral-100"
-          disabled
-        >
-          Import JSON
-        </button>
-        <button
-          class="px-4 py-2 rounded border border-red-300 text-red-700 text-sm hover:bg-red-50"
-          @click="scenarios.reset()"
-        >
-          Reset all data
-        </button>
-      </div>
-    </section>
+    <Card>
+      <CardHeader>
+        <CardTitle>Data</CardTitle>
+      </CardHeader>
+      <CardContent>
+        <div class="flex flex-wrap gap-2">
+          <Button @click="scenarios.loadSampleData()">Load sample data</Button>
+          <Button variant="outline" disabled>Export JSON</Button>
+          <Button variant="outline" disabled>Import JSON</Button>
+          <Button variant="destructive" @click="scenarios.reset()">Reset all data</Button>
+        </div>
+      </CardContent>
+    </Card>
   </div>
 </template>

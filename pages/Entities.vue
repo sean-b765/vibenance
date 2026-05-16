@@ -1,10 +1,13 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
+import AppSelect from '@/components/forms/AppSelect.vue'
 import AssetForm from '@/components/forms/AssetForm.vue'
 import ExpenseForm from '@/components/forms/ExpenseForm.vue'
 import IncomeForm from '@/components/forms/IncomeForm.vue'
 import LiabilityForm from '@/components/forms/LiabilityForm.vue'
 import MoveCloneBar from '@/components/forms/MoveCloneBar.vue'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
 import type { Asset } from '@/core/schemas/asset'
 import type { Expense } from '@/core/schemas/expense'
 import type { Income } from '@/core/schemas/income'
@@ -121,18 +124,15 @@ const submitSnapshot = (kind: 'assets' | 'liabilities', id: string) => {
         <p class="text-xs text-neutral-500">Editing scenario:</p>
       </div>
       <div class="flex items-center gap-2">
-        <select
-          :value="scenarioId ?? ''"
-          class="px-3 py-2 border border-neutral-300 rounded text-sm"
-          @change="scenarios.setActive(($event.target as HTMLSelectElement).value)"
-        >
-          <option v-for="s in scenarios.scenarios" :key="s.id" :value="s.id">{{ s.name }}</option>
-        </select>
-        <input
-          v-model="filter"
-          placeholder="Filter by name"
-          class="px-3 py-2 border border-neutral-300 rounded text-sm w-72"
-        />
+        <div class="min-w-[220px]">
+          <AppSelect
+            :model-value="scenarioId ?? ''"
+            :options="scenarios.scenarios.map((s) => ({ value: s.id, label: s.name }))"
+            placeholder="Scenario"
+            @update:model-value="(v) => v && scenarios.setActive(String(v))"
+          />
+        </div>
+        <Input v-model="filter" placeholder="Filter by name" class="w-72" />
       </div>
     </header>
 
@@ -140,12 +140,9 @@ const submitSnapshot = (kind: 'assets' | 'liabilities', id: string) => {
     <section>
       <div class="flex items-center justify-between mb-2">
         <h3 class="font-medium">Assets ({{ assets.length }})</h3>
-        <button
-          class="px-3 py-1 text-sm rounded border border-neutral-300 hover:bg-neutral-100"
-          @click="openNew('asset')"
-        >
+        <Button size="sm" variant="outline" @click="openNew('asset')">
           {{ newCategory === 'asset' ? 'Cancel' : '+ Add asset' }}
-        </button>
+        </Button>
       </div>
       <div v-if="newCategory === 'asset'" class="mb-3">
         <AssetForm
@@ -175,23 +172,24 @@ const submitSnapshot = (kind: 'assets' | 'liabilities', id: string) => {
               @delete="removeAsset"
             />
             <MoveCloneBar :from-scenario-id="scenarioId" :entity-id="a.id" kind="assets" />
-            <div class="flex items-center gap-2 p-3 bg-white rounded border border-neutral-200">
-              <span class="text-xs uppercase text-neutral-500">Log balance update</span>
-              <input
+            <div class="flex items-center gap-2 p-3 bg-card rounded-md border">
+              <span class="text-xs uppercase text-muted-foreground">Log balance update</span>
+              <Input
                 v-model="newSnapshotValue"
                 type="number"
                 step="0.01"
                 placeholder="New balance"
-                class="border border-neutral-300 rounded px-2 py-1 text-sm flex-1"
+                class="flex-1"
                 @focus="startSnapshot(a.id)"
               />
-              <button
-                class="px-2 py-1 rounded text-xs border border-neutral-300 hover:bg-neutral-100"
+              <Button
+                size="sm"
+                variant="outline"
                 :disabled="snapshotTargetId !== a.id || newSnapshotValue === ''"
                 @click="submitSnapshot('assets', a.id)"
               >
                 Append snapshot
-              </button>
+              </Button>
             </div>
           </div>
         </li>
@@ -203,12 +201,9 @@ const submitSnapshot = (kind: 'assets' | 'liabilities', id: string) => {
     <section>
       <div class="flex items-center justify-between mb-2">
         <h3 class="font-medium">Liabilities ({{ liabilities.length }})</h3>
-        <button
-          class="px-3 py-1 text-sm rounded border border-neutral-300 hover:bg-neutral-100"
-          @click="openNew('liability')"
-        >
+        <Button size="sm" variant="outline" @click="openNew('liability')">
           {{ newCategory === 'liability' ? 'Cancel' : '+ Add liability' }}
-        </button>
+        </Button>
       </div>
       <div v-if="newCategory === 'liability'" class="mb-3">
         <LiabilityForm
@@ -238,23 +233,24 @@ const submitSnapshot = (kind: 'assets' | 'liabilities', id: string) => {
               @delete="removeLiability"
             />
             <MoveCloneBar :from-scenario-id="scenarioId" :entity-id="l.id" kind="liabilities" />
-            <div class="flex items-center gap-2 p-3 bg-white rounded border border-neutral-200">
-              <span class="text-xs uppercase text-neutral-500">Log balance update</span>
-              <input
+            <div class="flex items-center gap-2 p-3 bg-card rounded-md border">
+              <span class="text-xs uppercase text-muted-foreground">Log balance update</span>
+              <Input
                 v-model="newSnapshotValue"
                 type="number"
                 step="0.01"
                 placeholder="New balance"
-                class="border border-neutral-300 rounded px-2 py-1 text-sm flex-1"
+                class="flex-1"
                 @focus="startSnapshot(l.id)"
               />
-              <button
-                class="px-2 py-1 rounded text-xs border border-neutral-300 hover:bg-neutral-100"
+              <Button
+                size="sm"
+                variant="outline"
                 :disabled="snapshotTargetId !== l.id || newSnapshotValue === ''"
                 @click="submitSnapshot('liabilities', l.id)"
               >
                 Append snapshot
-              </button>
+              </Button>
             </div>
           </div>
         </li>
@@ -266,12 +262,9 @@ const submitSnapshot = (kind: 'assets' | 'liabilities', id: string) => {
     <section>
       <div class="flex items-center justify-between mb-2">
         <h3 class="font-medium">Incomes ({{ incomes.length }})</h3>
-        <button
-          class="px-3 py-1 text-sm rounded border border-neutral-300 hover:bg-neutral-100"
-          @click="openNew('income')"
-        >
+        <Button size="sm" variant="outline" @click="openNew('income')">
           {{ newCategory === 'income' ? 'Cancel' : '+ Add income' }}
-        </button>
+        </Button>
       </div>
       <div v-if="newCategory === 'income'" class="mb-3">
         <IncomeForm
@@ -311,12 +304,9 @@ const submitSnapshot = (kind: 'assets' | 'liabilities', id: string) => {
     <section>
       <div class="flex items-center justify-between mb-2">
         <h3 class="font-medium">Expenses ({{ expenses.length }})</h3>
-        <button
-          class="px-3 py-1 text-sm rounded border border-neutral-300 hover:bg-neutral-100"
-          @click="openNew('expense')"
-        >
+        <Button size="sm" variant="outline" @click="openNew('expense')">
           {{ newCategory === 'expense' ? 'Cancel' : '+ Add expense' }}
-        </button>
+        </Button>
       </div>
       <div v-if="newCategory === 'expense'" class="mb-3">
         <ExpenseForm

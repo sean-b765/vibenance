@@ -1,6 +1,8 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import NetWorthChart from '@/components/NetWorthChart.vue'
+import { Button } from '@/components/ui/button'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { compute as computeNetWorth } from '@/core/engine/netWorth'
 import { simulate } from '@/core/engine/simulation'
 import { useScenariosStore } from '@/stores/scenarios'
@@ -43,65 +45,70 @@ const liabilityTotal = computed(() =>
 <template>
   <div v-if="!scenarios.hasData" class="max-w-xl mx-auto mt-20 text-center">
     <h2 class="text-2xl font-semibold mb-2">No data yet</h2>
-    <p class="text-neutral-600 mb-6">Get started by loading sample data or importing JSON.</p>
+    <p class="text-muted-foreground mb-6">Get started by loading sample data or importing JSON.</p>
     <div class="flex gap-3 justify-center">
-      <button
-        class="px-4 py-2 rounded bg-blue-600 text-white text-sm hover:bg-blue-700"
-        @click="scenarios.loadSampleData()"
-      >
-        Try with sample data
-      </button>
-      <button
-        class="px-4 py-2 rounded border border-neutral-300 text-sm hover:bg-neutral-100"
-        disabled
-      >
-        Import JSON
-      </button>
+      <Button @click="scenarios.loadSampleData()">Try with sample data</Button>
+      <Button variant="outline" disabled>Import JSON</Button>
     </div>
   </div>
 
   <div v-else class="space-y-6">
     <header>
       <h2 class="text-2xl font-semibold">Dashboard</h2>
-      <p class="text-sm text-neutral-500">
+      <p class="text-sm text-muted-foreground">
         Active scenario: {{ scenarios.activeScenario?.name }}
       </p>
     </header>
 
     <section class="grid grid-cols-1 md:grid-cols-3 gap-4">
-      <div class="p-6 bg-white rounded border border-neutral-200">
-        <div class="text-xs uppercase text-neutral-500 mb-1">Net worth</div>
-        <div class="text-3xl font-semibold">{{ formatCurrency(netWorth) }}</div>
-      </div>
-      <div class="p-6 bg-white rounded border border-neutral-200">
-        <div class="text-xs uppercase text-neutral-500 mb-1">Assets</div>
-        <div class="text-2xl font-semibold text-emerald-600">{{ formatCurrency(assetTotal) }}</div>
-      </div>
-      <div class="p-6 bg-white rounded border border-neutral-200">
-        <div class="text-xs uppercase text-neutral-500 mb-1">Liabilities</div>
-        <div class="text-2xl font-semibold text-red-600">{{ formatCurrency(liabilityTotal) }}</div>
-      </div>
+      <Card>
+        <CardHeader class="pb-2">
+          <CardTitle class="text-xs uppercase text-muted-foreground font-medium">Net worth</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div class="text-3xl font-semibold">{{ formatCurrency(netWorth) }}</div>
+        </CardContent>
+      </Card>
+      <Card>
+        <CardHeader class="pb-2">
+          <CardTitle class="text-xs uppercase text-muted-foreground font-medium">Assets</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div class="text-2xl font-semibold text-emerald-600">{{ formatCurrency(assetTotal) }}</div>
+        </CardContent>
+      </Card>
+      <Card>
+        <CardHeader class="pb-2">
+          <CardTitle class="text-xs uppercase text-muted-foreground font-medium">Liabilities</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div class="text-2xl font-semibold text-red-600">{{ formatCurrency(liabilityTotal) }}</div>
+        </CardContent>
+      </Card>
     </section>
 
-    <section class="p-6 bg-white rounded border border-neutral-200">
-      <h3 class="font-medium mb-2">Composition</h3>
-      <p class="text-sm text-neutral-500">Donut chart placeholder (ECharts wiring next).</p>
-    </section>
+    <Card>
+      <CardHeader>
+        <CardTitle>Favourite scenarios (5y)</CardTitle>
+      </CardHeader>
+      <CardContent>
+        <NetWorthChart
+          v-if="favouriteLines.length > 0"
+          :lines="favouriteLines"
+          bucket-kind="month"
+          height="300px"
+        />
+        <p v-else class="text-sm text-muted-foreground">No favourites yet.</p>
+      </CardContent>
+    </Card>
 
-    <section class="p-6 bg-white rounded border border-neutral-200">
-      <h3 class="font-medium mb-2">Favourite scenarios (5y)</h3>
-      <NetWorthChart
-        v-if="favouriteLines.length > 0"
-        :lines="favouriteLines"
-        bucket-kind="month"
-        height="300px"
-      />
-      <p v-else class="text-sm text-neutral-500">No favourites yet.</p>
-    </section>
-
-    <section class="p-6 bg-white rounded border border-neutral-200">
-      <h3 class="font-medium mb-2">Warnings</h3>
-      <p class="text-sm text-neutral-500">No warnings.</p>
-    </section>
+    <Card>
+      <CardHeader>
+        <CardTitle>Warnings</CardTitle>
+      </CardHeader>
+      <CardContent>
+        <p class="text-sm text-muted-foreground">No warnings.</p>
+      </CardContent>
+    </Card>
   </div>
 </template>
