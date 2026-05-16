@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import { ref } from 'vue'
+import ConfirmationDialog from '@/components/ConfirmationDialog.vue'
 import AppSelect from '@/components/forms/AppSelect.vue'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -20,6 +22,9 @@ const themeOptions: { value: ThemePreference; label: string }[] = [
 const onTheme = (v: ThemePreference | '') => {
   if (v) settingsStore.setTheme(v)
 }
+
+const resetOpen = ref(false)
+const confirmReset = () => scenarios.reset()
 </script>
 
 <template>
@@ -67,9 +72,17 @@ const onTheme = (v: ThemePreference | '') => {
           <Button @click="scenarios.loadSampleData()">Load sample data</Button>
           <Button variant="outline" disabled>Export JSON</Button>
           <Button variant="outline" disabled>Import JSON</Button>
-          <Button variant="destructive" @click="scenarios.reset()">Reset all data</Button>
+          <Button variant="destructive" @click="resetOpen = true">Reset all data</Button>
         </div>
       </CardContent>
     </Card>
+
+    <ConfirmationDialog
+      v-model:open="resetOpen"
+      title="Reset all data?"
+      description="This will delete all scenarios, entities, and snapshots. Cannot be undone."
+      confirm-label="Reset"
+      @confirm="confirmReset"
+    />
   </div>
 </template>
