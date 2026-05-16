@@ -1,0 +1,11 @@
+{
+  "jurisdiction": "AU",
+  "year": 2026,
+  "brackets": [
+    { "upTo": 18200, "rate": 0 },
+    { "upTo": 45000, "rate": 0.16 },
+    { "upTo": 135000, "rate": 0.3 },
+    { "upTo": 190000, "rate": 0.37 },
+    { "upTo": null, "rate": 0.45 }
+  ]
+}

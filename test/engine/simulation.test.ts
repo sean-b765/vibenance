@@ -145,6 +145,49 @@ describe('simulation.simulate', () => {
     }
   })
 
+  it('exposes per-entity daily series for assets and liabilities', () => {
+    const scenario = makeScenario({
+      entities: {
+        ...emptyEntities,
+        assets: [cashAsset({ id: 'a1', name: 'Cash' })],
+        liabilities: [mortgageLiability({ id: 'l1', name: 'Mortgage' })],
+      },
+    })
+    const result = simulate(scenario, '2026-01-01T00:00:00.000Z', '2026-01-03T00:00:00.000Z')
+    expect(result.entities).toHaveLength(2)
+    const cash = result.entities.find((e) => e.id === 'a1')
+    const mortgage = result.entities.find((e) => e.id === 'l1')
+    expect(cash?.kind).toBe('asset')
+    expect(mortgage?.kind).toBe('liability')
+    expect(cash?.points).toHaveLength(3)
+    expect(mortgage?.points).toHaveLength(3)
+    expect(cash?.points[0]?.value).toBe(1_000)
+    expect(mortgage?.points[0]?.value).toBe(100_000)
+  })
+
+  it('accrues per-entity values matching their growth config', () => {
+    const scenario = makeScenario({
+      entities: {
+        ...emptyEntities,
+        assets: [cashAsset({ id: 'a1', growth: { type: 'simple', rate: 0.05 } })],
+      },
+    })
+    const result = simulate(scenario, '2026-01-01T00:00:00.000Z', '2026-01-04T00:00:00.000Z')
+    const a = result.entities.find((e) => e.id === 'a1')
+    expect(a?.points[0]?.value).toBe(1_000)
+    expect(a?.points[1]?.value).toBeCloseTo(1_000 + 1 * (1_000 * (0.05 / 365)), 8)
+    expect(a?.points[3]?.value).toBeCloseTo(1_000 + 3 * (1_000 * (0.05 / 365)), 8)
+  })
+
+  it('per-entity series dates align with net-worth series', () => {
+    const scenario = makeScenario({
+      entities: { ...emptyEntities, assets: [cashAsset({})] },
+    })
+    const result = simulate(scenario, '2026-01-01T00:00:00.000Z', '2026-01-05T00:00:00.000Z')
+    const a = result.entities[0]!
+    expect(a.points.map((p) => p.date)).toEqual(result.series.map((p) => p.date))
+  })
+
   it('accrues liability interest, increasing the debt over time', () => {
     const scenario = makeScenario({
       entities: {

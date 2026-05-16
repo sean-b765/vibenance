@@ -7,8 +7,16 @@ import type { Scenario } from '@/core/schemas/scenario'
 
 const MS_PER_DAY = 86_400_000
 
+export type EntitySeries = {
+  id: string
+  name: string
+  kind: 'asset' | 'liability'
+  points: SeriesPoint[]
+}
+
 export type SimulationResult = {
   series: SeriesPoint[]
+  entities: EntitySeries[]
 }
 
 type EntityState = Map<string, InterestState>
@@ -45,6 +53,12 @@ const totalValue = (state: EntityState): number => {
   return sum
 }
 
+const entityValue = (state: EntityState, id: string): number => {
+  const s = state.get(id)
+  if (!s) return 0
+  return s.balance + s.accruedInterest
+}
+
 const eachDay = (from: string, to: string): string[] => {
   const fromMs = Date.parse(from)
   const toMs = Date.parse(to)
@@ -56,6 +70,14 @@ const eachDay = (from: string, to: string): string[] => {
   return days
 }
 
+const buildEntitySeriesShells = (
+  assets: Asset[],
+  liabilities: Liability[],
+): EntitySeries[] => [
+  ...assets.map((a) => ({ id: a.id, name: a.name, kind: 'asset' as const, points: [] })),
+  ...liabilities.map((l) => ({ id: l.id, name: l.name, kind: 'liability' as const, points: [] })),
+]
+
 export const simulate = (scenario: Scenario, fromDate: string, toDate: string): SimulationResult => {
   const { assets, liabilities } = scenario.entities
 
@@ -63,6 +85,7 @@ export const simulate = (scenario: Scenario, fromDate: string, toDate: string): 
   const liabilityState = seedState(liabilities, fromDate)
 
   const series: SeriesPoint[] = []
+  const entities = buildEntitySeriesShells(assets, liabilities)
 
   for (const day of eachDay(fromDate, toDate)) {
     if (day !== fromDate) {
@@ -74,7 +97,12 @@ export const simulate = (scenario: Scenario, fromDate: string, toDate: string): 
       date: day,
       value: totalValue(assetState) - totalValue(liabilityState),
     })
+
+    for (const e of entities) {
+      const state = e.kind === 'asset' ? assetState : liabilityState
+      e.points.push({ date: day, value: entityValue(state, e.id) })
+    }
   }
 
-  return { series }
+  return { series, entities }
 }

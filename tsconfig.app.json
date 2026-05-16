@@ -13,7 +13,8 @@
     "pages/**/*.ts",
     "pages/**/*.vue",
     "utils/**/*.ts",
-    "core/**/*.ts"
+    "core/**/*.ts",
+    "config/**/*.json"
   ],
   "exclude": ["test/**/*", "node_modules", "dist"],
   "compilerOptions": {
