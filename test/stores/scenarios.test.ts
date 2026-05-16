@@ -167,6 +167,62 @@ describe('scenarios store', () => {
     expect(s.entities.assets.find((x) => x.id === a.id)).toBeUndefined()
   })
 
+  it('moveEntity transfers an entity to another scenario, preserving id', () => {
+    const store = useScenariosStore()
+    store.loadSampleData()
+    const src = store.scenarios[0]!
+    const dst = store.scenarios[1]!
+    const asset = src.entities.assets[0]!
+    const beforeDst = dst.entities.assets.length
+    store.moveEntity(src.id, dst.id, 'assets', asset.id)
+    expect(src.entities.assets.find((a) => a.id === asset.id)).toBeUndefined()
+    expect(dst.entities.assets.find((a) => a.id === asset.id)?.name).toBe(asset.name)
+    expect(dst.entities.assets).toHaveLength(beforeDst + 1)
+  })
+
+  it('moveEntity is a no-op when source and target are the same', () => {
+    const store = useScenariosStore()
+    store.loadSampleData()
+    const s = store.scenarios[0]!
+    const asset = s.entities.assets[0]!
+    const before = s.entities.assets.length
+    store.moveEntity(s.id, s.id, 'assets', asset.id)
+    expect(s.entities.assets).toHaveLength(before)
+  })
+
+  it('cloneEntity copies entity into target scenario with fresh id', () => {
+    const store = useScenariosStore()
+    store.loadSampleData()
+    const src = store.scenarios[0]!
+    const dst = store.scenarios[1]!
+    const liability = src.entities.liabilities[0]!
+    const copy = store.cloneEntity(src.id, dst.id, 'liabilities', liability.id)!
+    expect(copy.id).not.toBe(liability.id)
+    expect(copy.name).toBe(liability.name)
+    expect(src.entities.liabilities.find((l) => l.id === liability.id)).toBeDefined()
+    expect(dst.entities.liabilities.find((l) => l.id === copy.id)).toBeDefined()
+  })
+
+  it('cloneEntity deep-copies snapshots so edits do not leak', () => {
+    const store = useScenariosStore()
+    store.loadSampleData()
+    const src = store.scenarios[0]!
+    const dst = store.scenarios[1]!
+    const asset = src.entities.assets[0]!
+    const copy = store.cloneEntity(src.id, dst.id, 'assets', asset.id)!
+    expect(copy.snapshots).not.toBe(asset.snapshots)
+    copy.snapshots.push({ date: '2030-01-01T00:00:00.000Z', value: 999, actual: true })
+    expect(asset.snapshots.find((s) => s.value === 999)).toBeUndefined()
+  })
+
+  it('cloneEntity returns null for unknown entity', () => {
+    const store = useScenariosStore()
+    store.loadSampleData()
+    const src = store.scenarios[0]!
+    const dst = store.scenarios[1]!
+    expect(store.cloneEntity(src.id, dst.id, 'assets', 'nope')).toBeNull()
+  })
+
   it('appendSnapshot pushes an actual snapshot to an asset', () => {
     const store = useScenariosStore()
     store.loadSampleData()

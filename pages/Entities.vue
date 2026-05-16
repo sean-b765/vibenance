@@ -4,6 +4,7 @@ import AssetForm from '@/components/forms/AssetForm.vue'
 import ExpenseForm from '@/components/forms/ExpenseForm.vue'
 import IncomeForm from '@/components/forms/IncomeForm.vue'
 import LiabilityForm from '@/components/forms/LiabilityForm.vue'
+import MoveCloneBar from '@/components/forms/MoveCloneBar.vue'
 import type { Asset } from '@/core/schemas/asset'
 import type { Expense } from '@/core/schemas/expense'
 import type { Income } from '@/core/schemas/income'
@@ -114,16 +115,25 @@ const submitSnapshot = (kind: 'assets' | 'liabilities', id: string) => {
   </div>
 
   <div v-else class="space-y-8">
-    <header class="flex items-center justify-between">
+    <header class="flex flex-wrap items-center justify-between gap-3">
       <div>
         <h2 class="text-2xl font-semibold">Entities</h2>
-        <p class="text-xs text-neutral-500">Scenario: {{ scenario.name }}</p>
+        <p class="text-xs text-neutral-500">Editing scenario:</p>
       </div>
-      <input
-        v-model="filter"
-        placeholder="Filter by name"
-        class="px-3 py-2 border border-neutral-300 rounded text-sm w-72"
-      />
+      <div class="flex items-center gap-2">
+        <select
+          :value="scenarioId ?? ''"
+          class="px-3 py-2 border border-neutral-300 rounded text-sm"
+          @change="scenarios.setActive(($event.target as HTMLSelectElement).value)"
+        >
+          <option v-for="s in scenarios.scenarios" :key="s.id" :value="s.id">{{ s.name }}</option>
+        </select>
+        <input
+          v-model="filter"
+          placeholder="Filter by name"
+          class="px-3 py-2 border border-neutral-300 rounded text-sm w-72"
+        />
+      </div>
     </header>
 
     <!-- Assets -->
@@ -156,7 +166,7 @@ const submitSnapshot = (kind: 'assets' | 'liabilities', id: string) => {
             <span class="text-sm font-mono">{{ formatCurrency(lastSnapshotValue(a.snapshots) ?? 0) }}</span>
             <span class="text-neutral-400">{{ expandedId === a.id ? '▾' : '▸' }}</span>
           </button>
-          <div v-if="expandedId === a.id" class="p-3 space-y-3 border-t border-neutral-200">
+          <div v-if="expandedId === a.id && scenarioId" class="p-3 space-y-3 border-t border-neutral-200">
             <AssetForm
               :asset="a"
               :liabilities="allLiabilities"
@@ -164,6 +174,7 @@ const submitSnapshot = (kind: 'assets' | 'liabilities', id: string) => {
               @cancel="expandedId = null"
               @delete="removeAsset"
             />
+            <MoveCloneBar :from-scenario-id="scenarioId" :entity-id="a.id" kind="assets" />
             <div class="flex items-center gap-2 p-3 bg-white rounded border border-neutral-200">
               <span class="text-xs uppercase text-neutral-500">Log balance update</span>
               <input
@@ -218,7 +229,7 @@ const submitSnapshot = (kind: 'assets' | 'liabilities', id: string) => {
             <span class="text-sm font-mono text-red-600">{{ formatCurrency(lastSnapshotValue(l.snapshots) ?? 0) }}</span>
             <span class="text-neutral-400">{{ expandedId === l.id ? '▾' : '▸' }}</span>
           </button>
-          <div v-if="expandedId === l.id" class="p-3 space-y-3 border-t border-neutral-200">
+          <div v-if="expandedId === l.id && scenarioId" class="p-3 space-y-3 border-t border-neutral-200">
             <LiabilityForm
               :liability="l"
               :assets="allAssets"
@@ -226,6 +237,7 @@ const submitSnapshot = (kind: 'assets' | 'liabilities', id: string) => {
               @cancel="expandedId = null"
               @delete="removeLiability"
             />
+            <MoveCloneBar :from-scenario-id="scenarioId" :entity-id="l.id" kind="liabilities" />
             <div class="flex items-center gap-2 p-3 bg-white rounded border border-neutral-200">
               <span class="text-xs uppercase text-neutral-500">Log balance update</span>
               <input
@@ -280,7 +292,7 @@ const submitSnapshot = (kind: 'assets' | 'liabilities', id: string) => {
             <span class="text-sm font-mono">{{ formatCurrency(i.amount) }}</span>
             <span class="text-neutral-400">{{ expandedId === i.id ? '▾' : '▸' }}</span>
           </button>
-          <div v-if="expandedId === i.id" class="p-3 border-t border-neutral-200">
+          <div v-if="expandedId === i.id && scenarioId" class="p-3 space-y-3 border-t border-neutral-200">
             <IncomeForm
               :income="i"
               :assets="allAssets"
@@ -288,6 +300,7 @@ const submitSnapshot = (kind: 'assets' | 'liabilities', id: string) => {
               @cancel="expandedId = null"
               @delete="removeIncome"
             />
+            <MoveCloneBar :from-scenario-id="scenarioId" :entity-id="i.id" kind="incomes" />
           </div>
         </li>
         <li v-if="incomes.length === 0" class="p-3 text-sm text-neutral-500 italic">No incomes.</li>
@@ -324,7 +337,7 @@ const submitSnapshot = (kind: 'assets' | 'liabilities', id: string) => {
             <span class="text-sm font-mono text-red-600">{{ formatCurrency(e.amount) }}</span>
             <span class="text-neutral-400">{{ expandedId === e.id ? '▾' : '▸' }}</span>
           </button>
-          <div v-if="expandedId === e.id" class="p-3 border-t border-neutral-200">
+          <div v-if="expandedId === e.id && scenarioId" class="p-3 space-y-3 border-t border-neutral-200">
             <ExpenseForm
               :expense="e"
               :assets="allAssets"
@@ -332,6 +345,7 @@ const submitSnapshot = (kind: 'assets' | 'liabilities', id: string) => {
               @cancel="expandedId = null"
               @delete="removeExpense"
             />
+            <MoveCloneBar :from-scenario-id="scenarioId" :entity-id="e.id" kind="expenses" />
           </div>
         </li>
         <li v-if="expenses.length === 0" class="p-3 text-sm text-neutral-500 italic">No expenses.</li>

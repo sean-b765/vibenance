@@ -155,6 +155,44 @@ export const useScenariosStore = defineStore('scenarios', () => {
   const upsertTransfer = (scenarioId: string, transfer: Transfer) =>
     upsertEntity(scenarioId, 'transfers', transfer)
 
+  const findEntity = <K extends EntityKey>(
+    scenarioId: string,
+    key: K,
+    entityId: string,
+  ): ScenarioEntities[K][number] | undefined => {
+    const s = scenarioById(scenarioId)
+    if (!s) return undefined
+    const list = s.entities[key] as Array<{ id: string }>
+    return list.find((e) => e.id === entityId) as ScenarioEntities[K][number] | undefined
+  }
+
+  const moveEntity = <K extends EntityKey>(
+    fromScenarioId: string,
+    toScenarioId: string,
+    key: K,
+    entityId: string,
+  ) => {
+    if (fromScenarioId === toScenarioId) return
+    const ent = findEntity(fromScenarioId, key, entityId)
+    if (!ent) return
+    upsertEntity(toScenarioId, key, ent)
+    removeEntity(fromScenarioId, key, entityId)
+  }
+
+  const cloneEntity = <K extends EntityKey>(
+    fromScenarioId: string,
+    toScenarioId: string,
+    key: K,
+    entityId: string,
+  ): ScenarioEntities[K][number] | null => {
+    const ent = findEntity(fromScenarioId, key, entityId)
+    if (!ent) return null
+    const copy = JSON.parse(JSON.stringify(ent)) as ScenarioEntities[K][number] & { id: string }
+    copy.id = uuidv7()
+    upsertEntity(toScenarioId, key, copy)
+    return copy
+  }
+
   const appendSnapshot = (
     scenarioId: string,
     kind: 'assets' | 'liabilities',
@@ -192,5 +230,7 @@ export const useScenariosStore = defineStore('scenarios', () => {
     upsertTransfer,
     removeEntity,
     appendSnapshot,
+    moveEntity,
+    cloneEntity,
   }
 })
