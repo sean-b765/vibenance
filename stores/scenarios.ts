@@ -110,6 +110,11 @@ export const useScenariosStore = defineStore('scenarios', () => {
     activeScenarioId.value = null
   }
 
+  const replaceAll = (next: Scenario[]) => {
+    scenarios.value = next
+    activeScenarioId.value = null
+  }
+
   let persistenceEnabled = false
   const enablePersistence = async () => {
     if (persistenceEnabled) return
@@ -255,6 +260,7 @@ export const useScenariosStore = defineStore('scenarios', () => {
     appendSnapshot,
     moveEntity,
     cloneEntity,
+    replaceAll,
     enablePersistence,
   }
 })

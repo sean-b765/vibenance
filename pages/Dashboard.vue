@@ -1,15 +1,43 @@
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, ref } from 'vue'
 import NetWorthChart from '@/components/NetWorthChart.vue'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { compute as computeNetWorth } from '@/core/engine/netWorth'
 import { simulate } from '@/core/engine/simulation'
+import { parseBundle } from '@/core/io/json'
 import { useScenariosStore } from '@/stores/scenarios'
+import { useSettingsStore } from '@/stores/settings'
+import { useTagsStore } from '@/stores/tags'
 import { formatCurrency } from '@/utils/format'
 
 const scenarios = useScenariosStore()
+const tags = useTagsStore()
+const settings = useSettingsStore()
 const today = new Date().toISOString()
+
+const fileInput = ref<HTMLInputElement | null>(null)
+const importError = ref<string | null>(null)
+
+const triggerImport = () => {
+  importError.value = null
+  fileInput.value?.click()
+}
+
+const onFileChange = async (event: Event) => {
+  const input = event.target as HTMLInputElement
+  const file = input.files?.[0]
+  input.value = ''
+  if (!file) return
+  try {
+    const bundle = parseBundle(await file.text())
+    scenarios.replaceAll(bundle.scenarios)
+    tags.replaceAll(bundle.tags)
+    settings.replaceAll(bundle.settings)
+  } catch (e) {
+    importError.value = e instanceof Error ? e.message : 'Import failed'
+  }
+}
 
 const favouriteLines = computed(() => {
   const start = new Date()
@@ -48,8 +76,10 @@ const liabilityTotal = computed(() =>
     <p class="text-muted-foreground mb-6">Get started by loading sample data or importing JSON.</p>
     <div class="flex gap-3 justify-center">
       <Button @click="scenarios.loadSampleData()">Try with sample data</Button>
-      <Button variant="outline" disabled>Import JSON</Button>
+      <Button variant="outline" @click="triggerImport">Import JSON</Button>
+      <input ref="fileInput" type="file" accept="application/json,.json" class="hidden" @change="onFileChange" />
     </div>
+    <div v-if="importError" class="mt-3 text-sm text-destructive">{{ importError }}</div>
   </div>
 
   <div v-else class="space-y-6">

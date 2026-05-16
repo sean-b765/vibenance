@@ -35,5 +35,9 @@ export const useSettingsStore = defineStore('settings', () => {
     )
   }
 
-  return { settings, setInflationRate, reset, enablePersistence }
+  const replaceAll = (next: Settings) => {
+    settings.value = next
+  }
+
+  return { settings, setInflationRate, reset, replaceAll, enablePersistence }
 })

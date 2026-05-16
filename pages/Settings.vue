@@ -7,12 +7,59 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { parseBundle, serializeBundle } from '@/core/io/json'
 import { useScenariosStore } from '@/stores/scenarios'
 import { useSettingsStore } from '@/stores/settings'
+import { useTagsStore } from '@/stores/tags'
 
 const settingsStore = useSettingsStore()
 const scenarios = useScenariosStore()
+const tags = useTagsStore()
 const mode = useColorMode()
+
+const fileInput = ref<HTMLInputElement | null>(null)
+const importError = ref<string | null>(null)
+const importSuccess = ref<string | null>(null)
+
+const doExport = () => {
+  const text = serializeBundle({
+    scenarios: scenarios.scenarios,
+    tags: tags.tags,
+    settings: settingsStore.settings,
+  })
+  const blob = new Blob([text], { type: 'application/json' })
+  const url = URL.createObjectURL(blob)
+  const a = document.createElement('a')
+  a.href = url
+  a.download = `pfm-export-${new Date().toISOString().slice(0, 10)}.json`
+  document.body.appendChild(a)
+  a.click()
+  a.remove()
+  URL.revokeObjectURL(url)
+}
+
+const triggerImport = () => {
+  importError.value = null
+  importSuccess.value = null
+  fileInput.value?.click()
+}
+
+const onFileChange = async (event: Event) => {
+  const input = event.target as HTMLInputElement
+  const file = input.files?.[0]
+  input.value = ''
+  if (!file) return
+  try {
+    const text = await file.text()
+    const bundle = parseBundle(text)
+    scenarios.replaceAll(bundle.scenarios)
+    tags.replaceAll(bundle.tags)
+    settingsStore.replaceAll(bundle.settings)
+    importSuccess.value = `Imported ${bundle.scenarios.length} scenarios, ${bundle.tags.length} tags.`
+  } catch (e) {
+    importError.value = e instanceof Error ? e.message : 'Import failed'
+  }
+}
 
 const themeOptions: { value: BasicColorSchema; label: string }[] = [
   { value: 'auto', label: 'System' },
@@ -71,10 +118,13 @@ const confirmReset = () => scenarios.reset()
       <CardContent>
         <div class="flex flex-wrap gap-2">
           <Button @click="scenarios.loadSampleData()">Load sample data</Button>
-          <Button variant="outline" disabled>Export JSON</Button>
-          <Button variant="outline" disabled>Import JSON</Button>
+          <Button variant="outline" @click="doExport">Export JSON</Button>
+          <Button variant="outline" @click="triggerImport">Import JSON</Button>
           <Button variant="destructive" @click="resetOpen = true">Reset all data</Button>
+          <input ref="fileInput" type="file" accept="application/json,.json" class="hidden" @change="onFileChange" />
         </div>
+        <div v-if="importError" class="mt-3 text-sm text-destructive">{{ importError }}</div>
+        <div v-if="importSuccess" class="mt-3 text-sm text-emerald-600">{{ importSuccess }}</div>
       </CardContent>
     </Card>
 

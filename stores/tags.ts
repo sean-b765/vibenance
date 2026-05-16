@@ -39,5 +39,9 @@ export const useTagsStore = defineStore('tags', () => {
     )
   }
 
-  return { tags, add, rename, remove, enablePersistence }
+  const replaceAll = (next: Tag[]) => {
+    tags.value = next
+  }
+
+  return { tags, add, rename, remove, replaceAll, enablePersistence }
 })
