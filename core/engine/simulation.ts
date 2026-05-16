@@ -1,3 +1,4 @@
+import { applyCashFlows } from '@/core/engine/cashflow'
 import { stepDay, type InterestState } from '@/core/engine/interest'
 import type { SeriesPoint } from '@/core/engine/series'
 import { latest } from '@/core/engine/snapshots'
@@ -91,6 +92,7 @@ export const simulate = (scenario: Scenario, fromDate: string, toDate: string): 
     if (day !== fromDate) {
       stepEntities<Asset>(assetState, assets, (a) => a.growth, day)
       stepEntities<Liability>(liabilityState, liabilities, (l) => l.interest, day)
+      applyCashFlows(day, scenario, assetState)
     }
 
     series.push({

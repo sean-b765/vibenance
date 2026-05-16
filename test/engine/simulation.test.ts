@@ -188,6 +188,145 @@ describe('simulation.simulate', () => {
     expect(a.points.map((p) => p.date)).toEqual(result.series.map((p) => p.date))
   })
 
+  it('weekly income deposits to its destination account over time', () => {
+    const scenario = makeScenario({
+      entities: {
+        ...emptyEntities,
+        assets: [cashAsset({ id: 'a1' })],
+        incomes: [
+          {
+            id: 'i1',
+            name: 'Wage',
+            type: 'wage',
+            amount: 1_000,
+            pretax: false,
+            destinationAccountId: 'a1',
+            frequency: { kind: 'weekly' },
+            startDate: '2026-01-01T00:00:00.000Z',
+            tagIds: [],
+          },
+        ],
+      },
+    })
+    const result = simulate(scenario, '2026-01-01T00:00:00.000Z', '2026-01-22T00:00:00.000Z')
+    // 3 weekly deposits across the window (Jan 8, 15, 22)
+    expect(result.series[0]?.value).toBe(1_000)
+    expect(result.series[result.series.length - 1]?.value).toBe(1_000 + 3 * 1_000)
+  })
+
+  it('weekly expense debits its source account over time', () => {
+    const scenario = makeScenario({
+      entities: {
+        ...emptyEntities,
+        assets: [cashAsset({ id: 'a1' })],
+        expenses: [
+          {
+            id: 'e1',
+            name: 'Groceries',
+            type: 'food',
+            amount: 100,
+            sourceAccountId: 'a1',
+            frequency: { kind: 'weekly' },
+            paymentDate: '2026-01-01T00:00:00.000Z',
+            fixed: false,
+            startDate: '2026-01-01T00:00:00.000Z',
+            tagIds: [],
+          },
+        ],
+      },
+    })
+    const result = simulate(scenario, '2026-01-01T00:00:00.000Z', '2026-01-22T00:00:00.000Z')
+    expect(result.series[result.series.length - 1]?.value).toBe(1_000 - 3 * 100)
+  })
+
+  it('one-off income posts exactly once on its payment date', () => {
+    const scenario = makeScenario({
+      entities: {
+        ...emptyEntities,
+        assets: [cashAsset({ id: 'a1' })],
+        incomes: [
+          {
+            id: 'i1',
+            name: 'Inheritance',
+            type: 'inheritance',
+            amount: 50_000,
+            pretax: false,
+            destinationAccountId: 'a1',
+            frequency: null,
+            paymentDate: '2026-01-03T00:00:00.000Z',
+            startDate: '2026-01-01T00:00:00.000Z',
+            tagIds: [],
+          },
+        ],
+      },
+    })
+    const result = simulate(scenario, '2026-01-01T00:00:00.000Z', '2026-01-10T00:00:00.000Z')
+    expect(result.series[0]?.value).toBe(1_000)
+    expect(result.series[2]?.value).toBe(1_000 + 50_000)
+    expect(result.series[9]?.value).toBe(1_000 + 50_000)
+  })
+
+  it('per-entity series for the destination asset reflects deposits', () => {
+    const scenario = makeScenario({
+      entities: {
+        ...emptyEntities,
+        assets: [cashAsset({ id: 'a1' })],
+        incomes: [
+          {
+            id: 'i1',
+            name: 'Wage',
+            type: 'wage',
+            amount: 500,
+            pretax: false,
+            destinationAccountId: 'a1',
+            frequency: { kind: 'weekly' },
+            startDate: '2026-01-01T00:00:00.000Z',
+            tagIds: [],
+          },
+        ],
+      },
+    })
+    const result = simulate(scenario, '2026-01-01T00:00:00.000Z', '2026-01-15T00:00:00.000Z')
+    const a = result.entities.find((e) => e.id === 'a1')!
+    expect(a.points[0]?.value).toBe(1_000)
+    expect(a.points[a.points.length - 1]?.value).toBe(1_000 + 2 * 500)
+  })
+
+  it('transfer shifts balance from source to destination', () => {
+    const scenario = makeScenario({
+      entities: {
+        ...emptyEntities,
+        assets: [
+          cashAsset({ id: 'a1' }),
+          cashAsset({
+            id: 'a2',
+            snapshots: [{ date: '2026-01-01T00:00:00.000Z', value: 0, actual: true }],
+          }),
+        ],
+        transfers: [
+          {
+            id: 't1',
+            name: 'Save',
+            type: 'one-off',
+            sourceAccountId: 'a1',
+            destinationAccountId: 'a2',
+            amount: 300,
+            frequency: { kind: 'monthly' },
+            startDate: '2026-01-05T00:00:00.000Z',
+            tagIds: [],
+          },
+        ],
+      },
+    })
+    const result = simulate(scenario, '2026-01-01T00:00:00.000Z', '2026-01-10T00:00:00.000Z')
+    const a1 = result.entities.find((e) => e.id === 'a1')!
+    const a2 = result.entities.find((e) => e.id === 'a2')!
+    expect(a1.points[a1.points.length - 1]?.value).toBe(700)
+    expect(a2.points[a2.points.length - 1]?.value).toBe(300)
+    // Net worth unchanged by a transfer.
+    expect(result.series[result.series.length - 1]?.value).toBe(1_000)
+  })
+
   it('accrues liability interest, increasing the debt over time', () => {
     const scenario = makeScenario({
       entities: {
