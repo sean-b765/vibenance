@@ -121,7 +121,6 @@ const submitSnapshot = (kind: 'assets' | 'liabilities', id: string) => {
     <header class="flex flex-wrap items-center justify-between gap-3">
       <div>
         <h2 class="text-2xl font-semibold">Entities</h2>
-        <p class="text-xs text-neutral-500">Editing scenario:</p>
       </div>
       <div class="flex items-center gap-2">
         <div class="min-w-[220px]">
@@ -159,7 +158,7 @@ const submitSnapshot = (kind: 'assets' | 'liabilities', id: string) => {
             class="w-full justify-start gap-3 p-3 h-auto font-normal rounded-none"
             @click="toggleExpand(a.id)"
           >
-            <span class="flex-1 font-medium">{{ a.name }}</span>
+            <span class="flex-1 font-medium text-start">{{ a.name }}</span>
             <span class="text-xs text-neutral-500">{{ a.type }}</span>
             <span class="text-sm font-mono">{{ formatCurrency(lastSnapshotValue(a.snapshots) ?? 0) }}</span>
             <span class="text-neutral-400">{{ expandedId === a.id ? '▾' : '▸' }}</span>
