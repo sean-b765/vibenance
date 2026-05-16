@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { useColorMode } from '@vueuse/core'
 import { computed } from 'vue'
 import VChart from 'vue-echarts'
 import type { BucketKind, SeriesPoint } from '@/core/engine/series'
@@ -35,6 +36,11 @@ const onAxisPointer = (event: { axesInfo?: { value: number }[] }) => {
 
 const onMouseOut = () => emit('hover', null)
 
+const mode = useColorMode()
+const isDark = computed(() => mode.value === 'dark')
+const axisColor = computed(() => (isDark.value ? '#a1a1aa' : '#525252'))
+const splitColor = computed(() => (isDark.value ? '#27272a' : '#e5e5e5'))
+
 const bucketed = computed(() =>
   props.lines.map((l) => ({
     name: l.name,
@@ -44,8 +50,13 @@ const bucketed = computed(() =>
 )
 
 const option = computed(() => ({
+  backgroundColor: 'transparent',
+  textStyle: { color: axisColor.value },
   tooltip: {
     trigger: 'axis',
+    backgroundColor: isDark.value ? '#18181b' : '#ffffff',
+    borderColor: isDark.value ? '#27272a' : '#e5e5e5',
+    textStyle: { color: isDark.value ? '#e5e5e5' : '#171717' },
     formatter: (params: { axisValueLabel: string; seriesName: string; value: [string, number]; color: string }[]) => {
       const date = params[0]?.axisValueLabel ?? ''
       const rows = params
@@ -62,23 +73,27 @@ const option = computed(() => ({
   },
   legend: {
     top: 0,
-    textStyle: { fontSize: 12 },
+    textStyle: { fontSize: 12, color: axisColor.value },
   },
   grid: { left: 56, right: 16, top: 32, bottom: 56 },
   xAxis: {
     type: 'time',
+    axisLine: { lineStyle: { color: splitColor.value } },
     axisLabel: {
       formatter: (v: number) => formatDate(new Date(v).toISOString()),
       fontSize: 11,
+      color: axisColor.value,
     },
   },
   yAxis: {
     type: 'value',
+    axisLine: { lineStyle: { color: splitColor.value } },
     axisLabel: {
       formatter: (v: number) => formatCompactCurrency(v),
       fontSize: 11,
+      color: axisColor.value,
     },
-    splitLine: { lineStyle: { color: '#e5e5e5' } },
+    splitLine: { lineStyle: { color: splitColor.value } },
   },
   dataZoom: [
     { type: 'inside' },

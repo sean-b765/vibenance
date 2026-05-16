@@ -113,7 +113,7 @@ const submitSnapshot = (kind: 'assets' | 'liabilities', id: string) => {
 </script>
 
 <template>
-  <div v-if="!scenario" class="text-neutral-500">
+  <div v-if="!scenario" class="text-muted-foreground">
     No active scenario. Load sample data on the dashboard, or create one in /scenarios.
   </div>
 
@@ -151,7 +151,7 @@ const submitSnapshot = (kind: 'assets' | 'liabilities', id: string) => {
           @delete="() => {}"
         />
       </div>
-      <ul class="divide-y border border-neutral-200 rounded bg-white">
+      <ul class="divide-y border border-border rounded bg-card">
         <li v-for="a in assets" :key="a.id">
           <Button
             variant="ghost"
@@ -159,11 +159,11 @@ const submitSnapshot = (kind: 'assets' | 'liabilities', id: string) => {
             @click="toggleExpand(a.id)"
           >
             <span class="flex-1 font-medium text-start">{{ a.name }}</span>
-            <span class="text-xs text-neutral-500">{{ a.type }}</span>
+            <span class="text-xs text-muted-foreground">{{ a.type }}</span>
             <span class="text-sm font-mono">{{ formatCurrency(lastSnapshotValue(a.snapshots) ?? 0) }}</span>
-            <span class="text-neutral-400">{{ expandedId === a.id ? '▾' : '▸' }}</span>
+            <span class="text-muted-foreground">{{ expandedId === a.id ? '▾' : '▸' }}</span>
           </Button>
-          <div v-if="expandedId === a.id && scenarioId" class="p-3 space-y-3 border-t border-neutral-200">
+          <div v-if="expandedId === a.id && scenarioId" class="p-3 space-y-3 border-t border-border">
             <AssetForm
               :asset="a"
               :liabilities="allLiabilities"
@@ -193,7 +193,7 @@ const submitSnapshot = (kind: 'assets' | 'liabilities', id: string) => {
             </div>
           </div>
         </li>
-        <li v-if="assets.length === 0" class="p-3 text-sm text-neutral-500 italic">No assets.</li>
+        <li v-if="assets.length === 0" class="p-3 text-sm text-muted-foreground italic">No assets.</li>
       </ul>
     </section>
 
@@ -213,7 +213,7 @@ const submitSnapshot = (kind: 'assets' | 'liabilities', id: string) => {
           @delete="() => {}"
         />
       </div>
-      <ul class="divide-y border border-neutral-200 rounded bg-white">
+      <ul class="divide-y border border-border rounded bg-card">
         <li v-for="l in liabilities" :key="l.id">
           <Button
             variant="ghost"
@@ -221,11 +221,11 @@ const submitSnapshot = (kind: 'assets' | 'liabilities', id: string) => {
             @click="toggleExpand(l.id)"
           >
             <span class="flex-1 font-medium">{{ l.name }}</span>
-            <span class="text-xs text-neutral-500">{{ l.type }}</span>
+            <span class="text-xs text-muted-foreground">{{ l.type }}</span>
             <span class="text-sm font-mono text-red-600">{{ formatCurrency(lastSnapshotValue(l.snapshots) ?? 0) }}</span>
-            <span class="text-neutral-400">{{ expandedId === l.id ? '▾' : '▸' }}</span>
+            <span class="text-muted-foreground">{{ expandedId === l.id ? '▾' : '▸' }}</span>
           </Button>
-          <div v-if="expandedId === l.id && scenarioId" class="p-3 space-y-3 border-t border-neutral-200">
+          <div v-if="expandedId === l.id && scenarioId" class="p-3 space-y-3 border-t border-border">
             <LiabilityForm
               :liability="l"
               :assets="allAssets"
@@ -255,7 +255,7 @@ const submitSnapshot = (kind: 'assets' | 'liabilities', id: string) => {
             </div>
           </div>
         </li>
-        <li v-if="liabilities.length === 0" class="p-3 text-sm text-neutral-500 italic">No liabilities.</li>
+        <li v-if="liabilities.length === 0" class="p-3 text-sm text-muted-foreground italic">No liabilities.</li>
       </ul>
     </section>
 
@@ -275,7 +275,7 @@ const submitSnapshot = (kind: 'assets' | 'liabilities', id: string) => {
           @delete="() => {}"
         />
       </div>
-      <ul class="divide-y border border-neutral-200 rounded bg-white">
+      <ul class="divide-y border border-border rounded bg-card">
         <li v-for="i in incomes" :key="i.id">
           <Button
             variant="ghost"
@@ -283,11 +283,11 @@ const submitSnapshot = (kind: 'assets' | 'liabilities', id: string) => {
             @click="toggleExpand(i.id)"
           >
             <span class="flex-1 font-medium">{{ i.name }}</span>
-            <span class="text-xs text-neutral-500">{{ i.type }} · {{ i.frequency?.kind ?? 'one-off' }}</span>
+            <span class="text-xs text-muted-foreground">{{ i.type }} · {{ i.frequency?.kind ?? 'one-off' }}</span>
             <span class="text-sm font-mono">{{ formatCurrency(i.amount) }}</span>
-            <span class="text-neutral-400">{{ expandedId === i.id ? '▾' : '▸' }}</span>
+            <span class="text-muted-foreground">{{ expandedId === i.id ? '▾' : '▸' }}</span>
           </Button>
-          <div v-if="expandedId === i.id && scenarioId" class="p-3 space-y-3 border-t border-neutral-200">
+          <div v-if="expandedId === i.id && scenarioId" class="p-3 space-y-3 border-t border-border">
             <IncomeForm
               :income="i"
               :assets="allAssets"
@@ -298,7 +298,7 @@ const submitSnapshot = (kind: 'assets' | 'liabilities', id: string) => {
             <MoveCloneBar :from-scenario-id="scenarioId" :entity-id="i.id" kind="incomes" />
           </div>
         </li>
-        <li v-if="incomes.length === 0" class="p-3 text-sm text-neutral-500 italic">No incomes.</li>
+        <li v-if="incomes.length === 0" class="p-3 text-sm text-muted-foreground italic">No incomes.</li>
       </ul>
     </section>
 
@@ -318,7 +318,7 @@ const submitSnapshot = (kind: 'assets' | 'liabilities', id: string) => {
           @delete="() => {}"
         />
       </div>
-      <ul class="divide-y border border-neutral-200 rounded bg-white">
+      <ul class="divide-y border border-border rounded bg-card">
         <li v-for="e in expenses" :key="e.id">
           <Button
             variant="ghost"
@@ -326,11 +326,11 @@ const submitSnapshot = (kind: 'assets' | 'liabilities', id: string) => {
             @click="toggleExpand(e.id)"
           >
             <span class="flex-1 font-medium">{{ e.name }}</span>
-            <span class="text-xs text-neutral-500">{{ e.type }} · {{ e.frequency?.kind ?? 'one-off' }}</span>
+            <span class="text-xs text-muted-foreground">{{ e.type }} · {{ e.frequency?.kind ?? 'one-off' }}</span>
             <span class="text-sm font-mono text-red-600">{{ formatCurrency(e.amount) }}</span>
-            <span class="text-neutral-400">{{ expandedId === e.id ? '▾' : '▸' }}</span>
+            <span class="text-muted-foreground">{{ expandedId === e.id ? '▾' : '▸' }}</span>
           </Button>
-          <div v-if="expandedId === e.id && scenarioId" class="p-3 space-y-3 border-t border-neutral-200">
+          <div v-if="expandedId === e.id && scenarioId" class="p-3 space-y-3 border-t border-border">
             <ExpenseForm
               :expense="e"
               :assets="allAssets"
@@ -341,7 +341,7 @@ const submitSnapshot = (kind: 'assets' | 'liabilities', id: string) => {
             <MoveCloneBar :from-scenario-id="scenarioId" :entity-id="e.id" kind="expenses" />
           </div>
         </li>
-        <li v-if="expenses.length === 0" class="p-3 text-sm text-neutral-500 italic">No expenses.</li>
+        <li v-if="expenses.length === 0" class="p-3 text-sm text-muted-foreground italic">No expenses.</li>
       </ul>
     </section>
   </div>

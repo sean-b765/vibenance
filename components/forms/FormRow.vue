@@ -4,7 +4,7 @@ defineProps<{ label: string }>()
 
 <template>
   <label class="flex flex-col gap-1 text-sm">
-    <span class="text-xs uppercase text-neutral-500">{{ label }}</span>
+    <span class="text-xs uppercase text-muted-foreground">{{ label }}</span>
     <slot />
   </label>
 </template>

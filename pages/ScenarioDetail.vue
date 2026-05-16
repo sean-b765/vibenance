@@ -194,12 +194,12 @@ const expenseTotal = computed(() =>
 </script>
 
 <template>
-  <div v-if="!scenario" class="text-neutral-500">Scenario not found.</div>
+  <div v-if="!scenario" class="text-muted-foreground">Scenario not found.</div>
 
   <div v-else class="space-y-6">
     <header class="flex items-center gap-3">
       <label class="relative cursor-pointer" title="Change colour">
-        <span class="block w-5 h-5 rounded-full border border-neutral-300" :style="{ background: scenario.colour }" />
+        <span class="block w-5 h-5 rounded-full border border-border" :style="{ background: scenario.colour }" />
         <input
           type="color"
           class="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
@@ -231,7 +231,7 @@ const expenseTotal = computed(() =>
       </template>
     </header>
 
-    <section class="p-6 bg-white rounded border border-neutral-200">
+    <section class="p-6 bg-card rounded border border-border">
       <div class="flex flex-wrap items-center justify-between gap-3 mb-4">
         <h3 class="font-medium">Net worth projection</h3>
         <div class="flex items-center gap-4 text-xs">
@@ -270,15 +270,15 @@ const expenseTotal = computed(() =>
 
       <div class="grid grid-cols-3 gap-4 mt-4 text-sm">
         <div>
-          <div class="text-xs uppercase text-neutral-500">Start</div>
+          <div class="text-xs uppercase text-muted-foreground">Start</div>
           <div class="font-semibold">{{ formatCurrency(startValue) }}</div>
         </div>
         <div>
-          <div class="text-xs uppercase text-neutral-500">End</div>
+          <div class="text-xs uppercase text-muted-foreground">End</div>
           <div class="font-semibold">{{ formatCurrency(endValue) }}</div>
         </div>
         <div>
-          <div class="text-xs uppercase text-neutral-500">Delta</div>
+          <div class="text-xs uppercase text-muted-foreground">Delta</div>
           <div class="font-semibold" :class="delta >= 0 ? 'text-emerald-600' : 'text-red-600'">
             {{ formatCurrency(delta) }}
           </div>
@@ -286,11 +286,11 @@ const expenseTotal = computed(() =>
       </div>
     </section>
 
-    <section class="p-6 bg-white rounded border border-neutral-200">
+    <section class="p-6 bg-card rounded border border-border">
       <div class="flex items-center justify-between mb-4">
         <h3 class="font-medium">
           Entity balances
-          <span class="text-xs text-neutral-500 font-normal ml-2">
+          <span class="text-xs text-muted-foreground font-normal ml-2">
             at {{ displayDate ? formatDate(displayDate) : '—' }}
             <span v-if="!hoverDate" class="ml-1">(end of horizon · hover graph to scrub)</span>
           </span>
@@ -304,7 +304,7 @@ const expenseTotal = computed(() =>
 
       <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div>
-          <div class="flex items-center justify-between text-xs uppercase text-neutral-500 mb-2">
+          <div class="flex items-center justify-between text-xs uppercase text-muted-foreground mb-2">
             <span>Assets</span>
             <span class="text-emerald-600 font-semibold">{{ formatCurrency(assetSum) }}</span>
           </div>
@@ -320,13 +320,13 @@ const expenseTotal = computed(() =>
                 <td class="py-2 text-right font-medium">{{ formatCurrency(r.value) }}</td>
               </tr>
               <tr v-if="assetRows.length === 0">
-                <td class="py-2 text-neutral-400 italic">No assets.</td>
+                <td class="py-2 text-muted-foreground italic">No assets.</td>
               </tr>
             </tbody>
           </table>
         </div>
         <div>
-          <div class="flex items-center justify-between text-xs uppercase text-neutral-500 mb-2">
+          <div class="flex items-center justify-between text-xs uppercase text-muted-foreground mb-2">
             <span>Liabilities</span>
             <span class="text-red-600 font-semibold">{{ formatCurrency(liabilitySum) }}</span>
           </div>
@@ -342,7 +342,7 @@ const expenseTotal = computed(() =>
                 <td class="py-2 text-right font-medium">{{ formatCurrency(r.value) }}</td>
               </tr>
               <tr v-if="liabilityRows.length === 0">
-                <td class="py-2 text-neutral-400 italic">No liabilities.</td>
+                <td class="py-2 text-muted-foreground italic">No liabilities.</td>
               </tr>
             </tbody>
           </table>
