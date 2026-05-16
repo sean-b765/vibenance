@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { Eye, EyeOff } from 'lucide-vue-next'
 import { computed, ref } from 'vue'
 import { useRoute } from 'vue-router'
 import AppSelect from '@/components/forms/AppSelect.vue'
@@ -6,6 +7,7 @@ import NetWorthChart from '@/components/NetWorthChart.vue'
 import { Button } from '@/components/ui/button'
 import type { BucketKind } from '@/core/engine/series'
 import { simulate } from '@/core/engine/simulation'
+import type { Scenario } from '@/core/schemas/scenario'
 import { useScenariosStore } from '@/stores/scenarios'
 import { formatCurrency, formatDate } from '@/utils/format'
 
@@ -18,12 +20,37 @@ const hoverDate = ref<string | null>(null)
 
 const scenario = computed(() => scenarios.scenarios.find((s) => s.id === route.params.id))
 
-const result = computed(() => {
+const disabledIds = ref<Set<string>>(new Set())
+const isDisabled = (id: string) => disabledIds.value.has(id)
+const toggleDisabled = (id: string) => {
+  const next = new Set(disabledIds.value)
+  if (next.has(id)) next.delete(id)
+  else next.add(id)
+  disabledIds.value = next
+}
+
+const effectiveScenario = computed<Scenario | null>(() => {
   if (!scenario.value) return null
+  const keep = <T extends { id: string }>(arr: T[]) =>
+    arr.filter((e) => !disabledIds.value.has(e.id))
+  return {
+    ...scenario.value,
+    entities: {
+      assets: keep(scenario.value.entities.assets),
+      liabilities: keep(scenario.value.entities.liabilities),
+      incomes: keep(scenario.value.entities.incomes),
+      expenses: keep(scenario.value.entities.expenses),
+      transfers: keep(scenario.value.entities.transfers),
+    },
+  }
+})
+
+const result = computed(() => {
+  if (!effectiveScenario.value) return null
   const start = new Date()
   const end = new Date(start)
   end.setFullYear(end.getFullYear() + horizonYears.value)
-  return simulate(scenario.value, start.toISOString(), end.toISOString())
+  return simulate(effectiveScenario.value, start.toISOString(), end.toISOString())
 })
 
 const series = computed(() => result.value?.series ?? [])
@@ -79,26 +106,30 @@ type Row = {
   name: string
   kind: 'asset' | 'liability'
   value: number
-  date: string
 }
 
-const rows = computed<Row[]>(() => {
-  if (!displayDate.value) return []
-  const targetMs = Date.parse(displayDate.value)
-  return entitySeries.value.map((e) => {
-    const p = nearestPointValue(e.points, targetMs)
-    return {
-      id: e.id,
-      name: e.name,
-      kind: e.kind,
-      value: p?.value ?? 0,
-      date: p?.date ?? displayDate.value!,
-    }
-  })
+const seriesById = computed(() => {
+  const map = new Map<string, { date: string; value: number }[]>()
+  for (const e of entitySeries.value) map.set(e.id, e.points)
+  return map
 })
 
-const assetRows = computed(() => rows.value.filter((r) => r.kind === 'asset'))
-const liabilityRows = computed(() => rows.value.filter((r) => r.kind === 'liability'))
+const buildRow = (id: string, name: string, kind: 'asset' | 'liability'): Row => {
+  if (isDisabled(id) || !displayDate.value) {
+    return { id, name, kind, value: 0 }
+  }
+  const points = seriesById.value.get(id)
+  if (!points) return { id, name, kind, value: 0 }
+  const p = nearestPointValue(points, Date.parse(displayDate.value))
+  return { id, name, kind, value: p?.value ?? 0 }
+}
+
+const assetRows = computed<Row[]>(() =>
+  scenario.value?.entities.assets.map((a) => buildRow(a.id, a.name, 'asset')) ?? [],
+)
+const liabilityRows = computed<Row[]>(() =>
+  scenario.value?.entities.liabilities.map((l) => buildRow(l.id, l.name, 'liability')) ?? [],
+)
 const assetSum = computed(() => assetRows.value.reduce((s, r) => s + r.value, 0))
 const liabilitySum = computed(() => liabilityRows.value.reduce((s, r) => s + r.value, 0))
 
@@ -117,18 +148,16 @@ const annualised = (amount: number, kind: string | null | undefined) =>
 
 const incomeTotal = computed(() =>
   scenario.value
-    ? scenario.value.entities.incomes.reduce(
-        (s, i) => s + annualised(i.amount, i.frequency?.kind ?? null),
-        0,
-      )
+    ? scenario.value.entities.incomes
+        .filter((i) => !isDisabled(i.id))
+        .reduce((s, i) => s + annualised(i.amount, i.frequency?.kind ?? null), 0)
     : 0,
 )
 const expenseTotal = computed(() =>
   scenario.value
-    ? scenario.value.entities.expenses.reduce(
-        (s, e) => s + annualised(e.amount, e.frequency?.kind ?? null),
-        0,
-      )
+    ? scenario.value.entities.expenses
+        .filter((e) => !isDisabled(e.id))
+        .reduce((s, e) => s + annualised(e.amount, e.frequency?.kind ?? null), 0)
     : 0,
 )
 </script>
@@ -221,7 +250,16 @@ const expenseTotal = computed(() =>
           </div>
           <table class="w-full text-sm">
             <tbody class="divide-y">
-              <tr v-for="r in assetRows" :key="r.id">
+              <tr v-for="r in assetRows" :key="r.id" :class="isDisabled(r.id) ? 'opacity-40' : ''">
+                <td class="py-2 w-8">
+                  <button
+                    type="button"
+                    class="text-muted-foreground hover:text-foreground"
+                    @click="toggleDisabled(r.id)"
+                  >
+                    <component :is="isDisabled(r.id) ? EyeOff : Eye" class="size-4" />
+                  </button>
+                </td>
                 <td class="py-2">{{ r.name }}</td>
                 <td class="py-2 text-right font-medium">{{ formatCurrency(r.value) }}</td>
               </tr>
@@ -238,7 +276,16 @@ const expenseTotal = computed(() =>
           </div>
           <table class="w-full text-sm">
             <tbody class="divide-y">
-              <tr v-for="r in liabilityRows" :key="r.id">
+              <tr v-for="r in liabilityRows" :key="r.id" :class="isDisabled(r.id) ? 'opacity-40' : ''">
+                <td class="py-2 w-8">
+                  <button
+                    type="button"
+                    class="text-muted-foreground hover:text-foreground"
+                    @click="toggleDisabled(r.id)"
+                  >
+                    <component :is="isDisabled(r.id) ? EyeOff : Eye" class="size-4" />
+                  </button>
+                </td>
                 <td class="py-2">{{ r.name }}</td>
                 <td class="py-2 text-right font-medium">{{ formatCurrency(r.value) }}</td>
               </tr>
@@ -261,7 +308,16 @@ const expenseTotal = computed(() =>
         </div>
         <table class="w-full text-sm">
           <tbody class="divide-y">
-            <tr v-for="i in scenario.entities.incomes" :key="i.id">
+            <tr v-for="i in scenario.entities.incomes" :key="i.id" :class="isDisabled(i.id) ? 'opacity-40' : ''">
+              <td class="py-2 w-8">
+                <button
+                  type="button"
+                  class="text-muted-foreground hover:text-foreground"
+                  @click="toggleDisabled(i.id)"
+                >
+                  <component :is="isDisabled(i.id) ? EyeOff : Eye" class="size-4" />
+                </button>
+              </td>
               <td class="py-2">
                 <div class="font-medium">{{ i.name }}</div>
                 <div class="text-xs text-muted-foreground">
@@ -287,7 +343,16 @@ const expenseTotal = computed(() =>
         </div>
         <table class="w-full text-sm">
           <tbody class="divide-y">
-            <tr v-for="e in scenario.entities.expenses" :key="e.id">
+            <tr v-for="e in scenario.entities.expenses" :key="e.id" :class="isDisabled(e.id) ? 'opacity-40' : ''">
+              <td class="py-2 w-8">
+                <button
+                  type="button"
+                  class="text-muted-foreground hover:text-foreground"
+                  @click="toggleDisabled(e.id)"
+                >
+                  <component :is="isDisabled(e.id) ? EyeOff : Eye" class="size-4" />
+                </button>
+              </td>
               <td class="py-2">
                 <div class="font-medium">{{ e.name }}</div>
                 <div class="text-xs text-muted-foreground">
@@ -312,7 +377,16 @@ const expenseTotal = computed(() =>
       </div>
       <table class="w-full text-sm">
         <tbody class="divide-y">
-          <tr v-for="t in scenario.entities.transfers" :key="t.id">
+          <tr v-for="t in scenario.entities.transfers" :key="t.id" :class="isDisabled(t.id) ? 'opacity-40' : ''">
+            <td class="py-2 w-8">
+              <button
+                type="button"
+                class="text-muted-foreground hover:text-foreground"
+                @click="toggleDisabled(t.id)"
+              >
+                <component :is="isDisabled(t.id) ? EyeOff : Eye" class="size-4" />
+              </button>
+            </td>
             <td class="py-2">
               <div class="font-medium">{{ t.name }}</div>
               <div class="text-xs text-muted-foreground">
