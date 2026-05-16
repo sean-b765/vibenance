@@ -4,6 +4,7 @@ import { uuidv7 } from 'uuidv7'
 import AppSelect from '@/components/forms/AppSelect.vue'
 import FormRow from '@/components/forms/FormRow.vue'
 import { Button } from '@/components/ui/button'
+import { Checkbox } from '@/components/ui/checkbox'
 import { Input } from '@/components/ui/input'
 import type { Asset } from '@/core/schemas/asset'
 import type { FrequencyKind } from '@/core/schemas/frequency'
@@ -179,7 +180,7 @@ const save = () => {
         <Input v-model.number="state.creditCardGracePeriodDays" type="number" min="0" />
       </FormRow>
       <FormRow label="Revolving">
-        <input v-model="state.creditCardRevolving" type="checkbox" class="self-start size-4" />
+        <Checkbox v-model="state.creditCardRevolving" class="self-start" />
       </FormRow>
     </template>
 

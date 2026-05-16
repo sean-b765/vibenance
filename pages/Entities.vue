@@ -154,15 +154,16 @@ const submitSnapshot = (kind: 'assets' | 'liabilities', id: string) => {
       </div>
       <ul class="divide-y border border-neutral-200 rounded bg-white">
         <li v-for="a in assets" :key="a.id">
-          <button
-            class="w-full flex items-center gap-3 p-3 text-left hover:bg-neutral-50"
+          <Button
+            variant="ghost"
+            class="w-full justify-start gap-3 p-3 h-auto font-normal rounded-none"
             @click="toggleExpand(a.id)"
           >
             <span class="flex-1 font-medium">{{ a.name }}</span>
             <span class="text-xs text-neutral-500">{{ a.type }}</span>
             <span class="text-sm font-mono">{{ formatCurrency(lastSnapshotValue(a.snapshots) ?? 0) }}</span>
             <span class="text-neutral-400">{{ expandedId === a.id ? '▾' : '▸' }}</span>
-          </button>
+          </Button>
           <div v-if="expandedId === a.id && scenarioId" class="p-3 space-y-3 border-t border-neutral-200">
             <AssetForm
               :asset="a"
@@ -215,15 +216,16 @@ const submitSnapshot = (kind: 'assets' | 'liabilities', id: string) => {
       </div>
       <ul class="divide-y border border-neutral-200 rounded bg-white">
         <li v-for="l in liabilities" :key="l.id">
-          <button
-            class="w-full flex items-center gap-3 p-3 text-left hover:bg-neutral-50"
+          <Button
+            variant="ghost"
+            class="w-full justify-start gap-3 p-3 h-auto font-normal rounded-none"
             @click="toggleExpand(l.id)"
           >
             <span class="flex-1 font-medium">{{ l.name }}</span>
             <span class="text-xs text-neutral-500">{{ l.type }}</span>
             <span class="text-sm font-mono text-red-600">{{ formatCurrency(lastSnapshotValue(l.snapshots) ?? 0) }}</span>
             <span class="text-neutral-400">{{ expandedId === l.id ? '▾' : '▸' }}</span>
-          </button>
+          </Button>
           <div v-if="expandedId === l.id && scenarioId" class="p-3 space-y-3 border-t border-neutral-200">
             <LiabilityForm
               :liability="l"
@@ -276,15 +278,16 @@ const submitSnapshot = (kind: 'assets' | 'liabilities', id: string) => {
       </div>
       <ul class="divide-y border border-neutral-200 rounded bg-white">
         <li v-for="i in incomes" :key="i.id">
-          <button
-            class="w-full flex items-center gap-3 p-3 text-left hover:bg-neutral-50"
+          <Button
+            variant="ghost"
+            class="w-full justify-start gap-3 p-3 h-auto font-normal rounded-none"
             @click="toggleExpand(i.id)"
           >
             <span class="flex-1 font-medium">{{ i.name }}</span>
             <span class="text-xs text-neutral-500">{{ i.type }} · {{ i.frequency?.kind ?? 'one-off' }}</span>
             <span class="text-sm font-mono">{{ formatCurrency(i.amount) }}</span>
             <span class="text-neutral-400">{{ expandedId === i.id ? '▾' : '▸' }}</span>
-          </button>
+          </Button>
           <div v-if="expandedId === i.id && scenarioId" class="p-3 space-y-3 border-t border-neutral-200">
             <IncomeForm
               :income="i"
@@ -318,15 +321,16 @@ const submitSnapshot = (kind: 'assets' | 'liabilities', id: string) => {
       </div>
       <ul class="divide-y border border-neutral-200 rounded bg-white">
         <li v-for="e in expenses" :key="e.id">
-          <button
-            class="w-full flex items-center gap-3 p-3 text-left hover:bg-neutral-50"
+          <Button
+            variant="ghost"
+            class="w-full justify-start gap-3 p-3 h-auto font-normal rounded-none"
             @click="toggleExpand(e.id)"
           >
             <span class="flex-1 font-medium">{{ e.name }}</span>
             <span class="text-xs text-neutral-500">{{ e.type }} · {{ e.frequency?.kind ?? 'one-off' }}</span>
             <span class="text-sm font-mono text-red-600">{{ formatCurrency(e.amount) }}</span>
             <span class="text-neutral-400">{{ expandedId === e.id ? '▾' : '▸' }}</span>
-          </button>
+          </Button>
           <div v-if="expandedId === e.id && scenarioId" class="p-3 space-y-3 border-t border-neutral-200">
             <ExpenseForm
               :expense="e"

@@ -4,6 +4,7 @@ import { uuidv7 } from 'uuidv7'
 import AppSelect from '@/components/forms/AppSelect.vue'
 import FormRow from '@/components/forms/FormRow.vue'
 import { Button } from '@/components/ui/button'
+import { Checkbox } from '@/components/ui/checkbox'
 import { Input } from '@/components/ui/input'
 import type { Asset } from '@/core/schemas/asset'
 import type { FrequencyKind } from '@/core/schemas/frequency'
@@ -124,7 +125,7 @@ const save = () => {
       <Input v-model.number="state.amount" type="number" step="0.01" />
     </FormRow>
     <FormRow label="Pretax">
-      <input v-model="state.pretax" type="checkbox" class="self-start size-4" />
+      <Checkbox v-model="state.pretax" class="self-start" />
     </FormRow>
     <FormRow label="Frequency">
       <AppSelect v-model="state.frequency" :options="frequencyOptions" />

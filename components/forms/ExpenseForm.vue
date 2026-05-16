@@ -4,6 +4,7 @@ import { uuidv7 } from 'uuidv7'
 import AppSelect from '@/components/forms/AppSelect.vue'
 import FormRow from '@/components/forms/FormRow.vue'
 import { Button } from '@/components/ui/button'
+import { Checkbox } from '@/components/ui/checkbox'
 import { Input } from '@/components/ui/input'
 import type { Asset } from '@/core/schemas/asset'
 import { expenseSchema, type Expense } from '@/core/schemas/expense'
@@ -121,7 +122,7 @@ const save = () => {
       <Input v-model.number="state.amount" type="number" step="0.01" />
     </FormRow>
     <FormRow label="Fixed">
-      <input v-model="state.fixed" type="checkbox" class="self-start size-4" />
+      <Checkbox v-model="state.fixed" class="self-start" />
     </FormRow>
     <FormRow label="Frequency">
       <AppSelect v-model="state.frequency" :options="frequencyOptions" />

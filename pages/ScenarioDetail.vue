@@ -5,6 +5,7 @@ import { useRoute } from 'vue-router'
 import AppSelect from '@/components/forms/AppSelect.vue'
 import NetWorthChart from '@/components/NetWorthChart.vue'
 import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
 import type { BucketKind } from '@/core/engine/series'
 import { simulate } from '@/core/engine/simulation'
 import type { Scenario } from '@/core/schemas/scenario'
@@ -155,15 +156,16 @@ const incomeTotal = computed(() =>
 )
 const isEditingName = ref(false)
 const nameDraft = ref('')
-const nameInput = ref<HTMLInputElement | null>(null)
+const nameInput = ref<{ $el?: HTMLInputElement } | null>(null)
 
 const startEditName = async () => {
   if (!scenario.value) return
   nameDraft.value = scenario.value.name
   isEditingName.value = true
   await nextTick()
-  nameInput.value?.focus()
-  nameInput.value?.select()
+  const el = nameInput.value?.$el
+  el?.focus()
+  el?.select()
 }
 const commitName = () => {
   if (!scenario.value) return
@@ -207,30 +209,25 @@ const expenseTotal = computed(() =>
       </label>
       <template v-if="!isEditingName">
         <h2 class="text-2xl font-semibold">{{ scenario.name }}</h2>
-        <button
-          type="button"
-          class="text-muted-foreground hover:text-foreground"
-          title="Rename"
-          @click="startEditName"
-        >
+        <Button variant="ghost" size="icon" title="Rename" @click="startEditName">
           <Pencil class="size-4" />
-        </button>
+        </Button>
       </template>
       <template v-else>
-        <input
+        <Input
           ref="nameInput"
           v-model="nameDraft"
-          class="text-2xl font-semibold bg-transparent border-b border-neutral-300 focus:outline-none focus:border-primary px-1"
+          class="text-2xl font-semibold h-10 max-w-xs"
           @keydown.enter="commitName"
           @keydown.esc="cancelName"
           @blur="commitName"
         />
-        <button type="button" class="text-emerald-600 hover:text-emerald-700" title="Save" @mousedown.prevent="commitName">
+        <Button variant="ghost" size="icon" title="Save" class="text-emerald-600 hover:text-emerald-700" @mousedown.prevent="commitName">
           <Check class="size-4" />
-        </button>
-        <button type="button" class="text-muted-foreground hover:text-foreground" title="Cancel" @mousedown.prevent="cancelName">
+        </Button>
+        <Button variant="ghost" size="icon" title="Cancel" @mousedown.prevent="cancelName">
           <X class="size-4" />
-        </button>
+        </Button>
       </template>
     </header>
 
@@ -315,13 +312,9 @@ const expenseTotal = computed(() =>
             <tbody class="divide-y">
               <tr v-for="r in assetRows" :key="r.id" :class="isDisabled(r.id) ? 'opacity-40' : ''">
                 <td class="py-2 w-8">
-                  <button
-                    type="button"
-                    class="text-muted-foreground hover:text-foreground"
-                    @click="toggleDisabled(r.id)"
-                  >
+                  <Button variant="ghost" size="icon" class="size-7" @click="toggleDisabled(r.id)">
                     <component :is="isDisabled(r.id) ? EyeOff : Eye" class="size-4" />
-                  </button>
+                  </Button>
                 </td>
                 <td class="py-2">{{ r.name }}</td>
                 <td class="py-2 text-right font-medium">{{ formatCurrency(r.value) }}</td>
@@ -341,13 +334,9 @@ const expenseTotal = computed(() =>
             <tbody class="divide-y">
               <tr v-for="r in liabilityRows" :key="r.id" :class="isDisabled(r.id) ? 'opacity-40' : ''">
                 <td class="py-2 w-8">
-                  <button
-                    type="button"
-                    class="text-muted-foreground hover:text-foreground"
-                    @click="toggleDisabled(r.id)"
-                  >
+                  <Button variant="ghost" size="icon" class="size-7" @click="toggleDisabled(r.id)">
                     <component :is="isDisabled(r.id) ? EyeOff : Eye" class="size-4" />
-                  </button>
+                  </Button>
                 </td>
                 <td class="py-2">{{ r.name }}</td>
                 <td class="py-2 text-right font-medium">{{ formatCurrency(r.value) }}</td>
@@ -373,13 +362,9 @@ const expenseTotal = computed(() =>
           <tbody class="divide-y">
             <tr v-for="i in scenario.entities.incomes" :key="i.id" :class="isDisabled(i.id) ? 'opacity-40' : ''">
               <td class="py-2 w-8">
-                <button
-                  type="button"
-                  class="text-muted-foreground hover:text-foreground"
-                  @click="toggleDisabled(i.id)"
-                >
+                <Button variant="ghost" size="icon" class="size-7" @click="toggleDisabled(i.id)">
                   <component :is="isDisabled(i.id) ? EyeOff : Eye" class="size-4" />
-                </button>
+                </Button>
               </td>
               <td class="py-2">
                 <div class="font-medium">{{ i.name }}</div>
@@ -408,13 +393,9 @@ const expenseTotal = computed(() =>
           <tbody class="divide-y">
             <tr v-for="e in scenario.entities.expenses" :key="e.id" :class="isDisabled(e.id) ? 'opacity-40' : ''">
               <td class="py-2 w-8">
-                <button
-                  type="button"
-                  class="text-muted-foreground hover:text-foreground"
-                  @click="toggleDisabled(e.id)"
-                >
+                <Button variant="ghost" size="icon" class="size-7" @click="toggleDisabled(e.id)">
                   <component :is="isDisabled(e.id) ? EyeOff : Eye" class="size-4" />
-                </button>
+                </Button>
               </td>
               <td class="py-2">
                 <div class="font-medium">{{ e.name }}</div>
@@ -442,13 +423,9 @@ const expenseTotal = computed(() =>
         <tbody class="divide-y">
           <tr v-for="t in scenario.entities.transfers" :key="t.id" :class="isDisabled(t.id) ? 'opacity-40' : ''">
             <td class="py-2 w-8">
-              <button
-                type="button"
-                class="text-muted-foreground hover:text-foreground"
-                @click="toggleDisabled(t.id)"
-              >
+              <Button variant="ghost" size="icon" class="size-7" @click="toggleDisabled(t.id)">
                 <component :is="isDisabled(t.id) ? EyeOff : Eye" class="size-4" />
-              </button>
+              </Button>
             </td>
             <td class="py-2">
               <div class="font-medium">{{ t.name }}</div>
