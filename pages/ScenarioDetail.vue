@@ -101,6 +101,36 @@ const assetRows = computed(() => rows.value.filter((r) => r.kind === 'asset'))
 const liabilityRows = computed(() => rows.value.filter((r) => r.kind === 'liability'))
 const assetSum = computed(() => assetRows.value.reduce((s, r) => s + r.value, 0))
 const liabilitySum = computed(() => liabilityRows.value.reduce((s, r) => s + r.value, 0))
+
+const yearlyMultiplier = (kind: string | null | undefined): number => {
+  switch (kind) {
+    case 'daily': return 365
+    case 'weekly': return 52
+    case 'fortnightly': return 26
+    case 'monthly': return 12
+    case 'annually': return 1
+    default: return 0
+  }
+}
+const annualised = (amount: number, kind: string | null | undefined) =>
+  amount * yearlyMultiplier(kind)
+
+const incomeTotal = computed(() =>
+  scenario.value
+    ? scenario.value.entities.incomes.reduce(
+        (s, i) => s + annualised(i.amount, i.frequency?.kind ?? null),
+        0,
+      )
+    : 0,
+)
+const expenseTotal = computed(() =>
+  scenario.value
+    ? scenario.value.entities.expenses.reduce(
+        (s, e) => s + annualised(e.amount, e.frequency?.kind ?? null),
+        0,
+      )
+    : 0,
+)
 </script>
 
 <template>
@@ -219,6 +249,80 @@ const liabilitySum = computed(() => liabilityRows.value.reduce((s, r) => s + r.v
           </table>
         </div>
       </div>
+    </section>
+
+    <section class="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <div class="p-4 bg-card rounded-md border">
+        <div class="flex items-center justify-between text-xs uppercase text-muted-foreground mb-2">
+          <span>Incomes ({{ scenario.entities.incomes.length }})</span>
+          <span class="text-emerald-600 font-semibold">
+            +{{ formatCurrency(incomeTotal) }}/yr
+          </span>
+        </div>
+        <table class="w-full text-sm">
+          <tbody class="divide-y">
+            <tr v-for="i in scenario.entities.incomes" :key="i.id">
+              <td class="py-2">
+                <div class="font-medium">{{ i.name }}</div>
+                <div class="text-xs text-muted-foreground">
+                  {{ i.type }} · {{ i.frequency?.kind ?? 'one-off' }}
+                </div>
+              </td>
+              <td class="py-2 text-right font-medium text-emerald-600">
+                +{{ formatCurrency(i.amount) }}
+              </td>
+            </tr>
+            <tr v-if="scenario.entities.incomes.length === 0">
+              <td class="py-2 text-muted-foreground italic">No incomes.</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="p-4 bg-card rounded-md border">
+        <div class="flex items-center justify-between text-xs uppercase text-muted-foreground mb-2">
+          <span>Expenses ({{ scenario.entities.expenses.length }})</span>
+          <span class="text-red-600 font-semibold">
+            -{{ formatCurrency(expenseTotal) }}/yr
+          </span>
+        </div>
+        <table class="w-full text-sm">
+          <tbody class="divide-y">
+            <tr v-for="e in scenario.entities.expenses" :key="e.id">
+              <td class="py-2">
+                <div class="font-medium">{{ e.name }}</div>
+                <div class="text-xs text-muted-foreground">
+                  {{ e.type }} · {{ e.frequency?.kind ?? 'one-off' }}
+                </div>
+              </td>
+              <td class="py-2 text-right font-medium text-red-600">
+                -{{ formatCurrency(e.amount) }}
+              </td>
+            </tr>
+            <tr v-if="scenario.entities.expenses.length === 0">
+              <td class="py-2 text-muted-foreground italic">No expenses.</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section v-if="scenario.entities.transfers.length > 0" class="p-4 bg-card rounded-md border">
+      <div class="text-xs uppercase text-muted-foreground mb-2">
+        Transfers ({{ scenario.entities.transfers.length }})
+      </div>
+      <table class="w-full text-sm">
+        <tbody class="divide-y">
+          <tr v-for="t in scenario.entities.transfers" :key="t.id">
+            <td class="py-2">
+              <div class="font-medium">{{ t.name }}</div>
+              <div class="text-xs text-muted-foreground">
+                {{ t.type }} · {{ t.frequency?.kind ?? 'one-off' }}
+              </div>
+            </td>
+            <td class="py-2 text-right font-medium">{{ formatCurrency(t.amount) }}</td>
+          </tr>
+        </tbody>
+      </table>
     </section>
   </div>
 </template>
