@@ -1,11 +1,11 @@
 <script setup lang="ts">
-import { Check, Eye, EyeOff, Pencil, X } from 'lucide-vue-next'
-import { computed, nextTick, ref } from 'vue'
+import { Eye, EyeOff } from 'lucide-vue-next'
+import { computed, ref } from 'vue'
 import { useRoute } from 'vue-router'
 import AppSelect from '@/components/forms/AppSelect.vue'
+import InlineEdit from '@/components/inputs/InlineEdit.vue'
 import NetWorthChart from '@/components/NetWorthChart.vue'
 import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
 import type { BucketKind } from '@/core/engine/series'
 import { simulate } from '@/core/engine/simulation'
 import type { Scenario } from '@/core/schemas/scenario'
@@ -154,29 +154,9 @@ const incomeTotal = computed(() =>
         .reduce((s, i) => s + annualised(i.amount, i.frequency?.kind ?? null), 0)
     : 0,
 )
-const isEditingName = ref(false)
-const nameDraft = ref('')
-const nameInput = ref<{ $el?: HTMLInputElement } | null>(null)
-
-const startEditName = async () => {
+const onRename = (next: string) => {
   if (!scenario.value) return
-  nameDraft.value = scenario.value.name
-  isEditingName.value = true
-  await nextTick()
-  const el = nameInput.value?.$el
-  el?.focus()
-  el?.select()
-}
-const commitName = () => {
-  if (!scenario.value) return
-  const trimmed = nameDraft.value.trim()
-  if (trimmed && trimmed !== scenario.value.name) {
-    scenarios.rename(scenario.value.id, trimmed)
-  }
-  isEditingName.value = false
-}
-const cancelName = () => {
-  isEditingName.value = false
+  scenarios.rename(scenario.value.id, next)
 }
 const onColourChange = (e: Event) => {
   if (!scenario.value) return
@@ -207,28 +187,13 @@ const expenseTotal = computed(() =>
           @input="onColourChange"
         />
       </label>
-      <template v-if="!isEditingName">
-        <h2 class="text-2xl font-semibold">{{ scenario.name }}</h2>
-        <Button variant="ghost" size="icon" title="Rename" @click="startEditName">
-          <Pencil class="size-4" />
-        </Button>
-      </template>
-      <template v-else>
-        <Input
-          ref="nameInput"
-          v-model="nameDraft"
-          class="text-2xl font-semibold h-10 max-w-xs"
-          @keydown.enter="commitName"
-          @keydown.esc="cancelName"
-          @blur="commitName"
-        />
-        <Button variant="ghost" size="icon" title="Save" class="text-emerald-600 hover:text-emerald-700" @mousedown.prevent="commitName">
-          <Check class="size-4" />
-        </Button>
-        <Button variant="ghost" size="icon" title="Cancel" @mousedown.prevent="cancelName">
-          <X class="size-4" />
-        </Button>
-      </template>
+      <InlineEdit
+        :model-value="scenario.name"
+        aria-label="Rename"
+        label-class="text-2xl font-semibold"
+        input-class="text-2xl md:text-2xl font-semibold h-10"
+        @update:model-value="onRename"
+      />
     </header>
 
     <section class="p-6 bg-card rounded border border-border">
