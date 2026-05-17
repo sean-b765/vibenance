@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { Pencil, X } from 'lucide-vue-next'
+import { Pencil, Check } from 'lucide-vue-next'
 import { computed, nextTick, ref } from 'vue'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -50,10 +50,6 @@ const cancel = () => {
 	isEditing.value = false
 }
 
-const onEnter = (e: KeyboardEvent) => {
-	;(e.target as HTMLInputElement).blur()
-}
-
 const mirrorText = computed(() => draft.value || props.modelValue || ' ')
 </script>
 
@@ -99,20 +95,19 @@ const mirrorText = computed(() => draft.value || props.modelValue || ' ')
 							inputClass,
 						)
 					"
-					@keydown.enter="onEnter"
+					@keydown.enter="commit"
 					@keydown.esc="cancel"
-					@blur="commit"
+					@blur="cancel"
 				/>
 			</span>
 			<Button
-				variant="ghost"
 				size="icon"
 				class="size-5 cursor-pointer"
-				aria-label="Cancel"
-				title="Cancel"
-				@mousedown.prevent="cancel"
+				aria-label="Save"
+				title="Save"
+				@mousedown.prevent="commit"
 			>
-				<X class="size-3" />
+				<Check class="size-3" />
 			</Button>
 		</template>
 	</div>
