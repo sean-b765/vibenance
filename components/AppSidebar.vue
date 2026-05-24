@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { LayoutDashboard, ListChecks, Network, Settings as SettingsIcon } from 'lucide-vue-next'
+import { LayoutDashboard, TableProperties, Settings as SettingsIcon, ChartLine } from 'lucide-vue-next'
 import { computed } from 'vue'
 import { RouterLink, useRoute } from 'vue-router'
 import type { SidebarProps } from '@/components/ui/sidebar'
@@ -21,8 +21,8 @@ const route = useRoute()
 
 const nav = [
   { to: '/', label: 'Dashboard', icon: LayoutDashboard, match: (p: string) => p === '/' },
-  { to: '/scenarios', label: 'Scenarios', icon: Network, match: (p: string) => p.startsWith('/scenarios') },
-  { to: '/entities', label: 'Entities', icon: ListChecks, match: (p: string) => p === '/entities' },
+  { to: '/scenarios', label: 'Scenarios', icon: ChartLine, match: (p: string) => p.startsWith('/scenarios') },
+  { to: '/entities', label: 'Entities', icon: TableProperties, match: (p: string) => p === '/entities' },
   { to: '/settings', label: 'Settings', icon: SettingsIcon, match: (p: string) => p === '/settings' },
 ]
 
