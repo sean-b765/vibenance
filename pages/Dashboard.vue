@@ -14,6 +14,7 @@ import { useSettingsStore } from '@/stores/settings'
 import { useTagsStore } from '@/stores/tags'
 import { useWarningsStore } from '@/stores/warnings'
 import { formatCurrency } from '@/utils/format'
+import { warningRoute } from '@/utils/warningRoute'
 
 const scenarios = useScenariosStore()
 const tags = useTagsStore()
@@ -23,14 +24,7 @@ const router = useRouter()
 const today = new Date().toISOString()
 
 const goToWarning = (scenarioId: string, w: Warning) => {
-  if (w.entityType === 'scenario') {
-    router.push({ name: 'scenario-detail', params: { id: scenarioId } })
-    return
-  }
-  router.push({
-    name: 'entities',
-    query: { scenario: scenarioId, expand: w.entityId },
-  })
+  router.push(warningRoute(scenarioId, w))
 }
 
 const fileInput = ref<HTMLInputElement | null>(null)

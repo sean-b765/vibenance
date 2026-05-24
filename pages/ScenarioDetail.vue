@@ -16,6 +16,7 @@ import type { Warning } from '@/core/validation/warnings'
 import { useScenariosStore } from '@/stores/scenarios'
 import { useWarningsStore } from '@/stores/warnings'
 import { formatCurrency, formatDate } from '@/utils/format'
+import { warningRoute } from '@/utils/warningRoute'
 
 const route = useRoute()
 const router = useRouter()
@@ -39,11 +40,7 @@ onMounted(fireSummaryToast)
 watch(() => route.params.id, fireSummaryToast)
 
 const goToWarning = (w: Warning) => {
-  if (w.entityType === 'scenario') return
-  router.push({
-    name: 'entities',
-    query: { scenario: route.params.id as string, expand: w.entityId },
-  })
+  router.push(warningRoute(route.params.id as string, w))
 }
 
 const bucketKind = ref<BucketKind>('month')
