@@ -270,21 +270,51 @@ For each scenario, for each day from latest snapshot date to scenario end date:
 4. Apply daily appreciation or depreciation (`growth` field) on assets.
 5. Compute and emit net worth for the day.
 
-### 5.3 Offset Account Logic
+### 5.3 Offset Account & Loan Repayment Logic
+
+**Offset link.** An asset with `type === 'account_offset'` AND `linkedLiabilityId === loan.id` reduces the loan's interest accrual base. Only `account_offset` types count; other asset types with `linkedLiabilityId` are ignored by the accrual reducer (link is for documentation/UI only). Multiple offset accounts may link to the same loan; their balances sum.
 
 ```
-effectiveLoanBalance = loanBalance - sum(offsetAccountBalances where linkedLoanId == loan.id)
-dailyInterest = effectiveLoanBalance * (annualRate / 365)
+effectiveLoanBalance = max(loanBalance - sum(linkedOffsetBalances), 0)
+dailyInterest        = effectiveLoanBalance * (annualRate / 365)
 ```
 
-On scheduled repayment day:
+Negative offset balances are treated as 0 in the reducer.
+
+**Repayment.** Loan repayment is a dedicated cashflow primitive (NOT a `Transfer`). Transfers are asset → asset, value-preserving. Repayments are asset → liability and asymmetric: only the principal portion reduces `loanBalance`; the interest portion extinguishes `accruedInterest` (paid to the lender).
+
+On each repayment day (cadence per `liability.paymentFrequency`, bounded by `startDate`/`endDate`):
 
 ```
-principal = repayment - accruedInterest
-loanBalance -= principal
+interestPaid  = min(repayment, accruedInterest)
+principalPaid = min(repayment - interestPaid, loanBalance)
+sourceAccount -= (interestPaid + principalPaid)   // overflow above outstanding debt is NOT debited
+loanBalance   -= principalPaid
+accruedInterest -= interestPaid
 ```
 
-Offset balance fluctuates with income/expense/transfer flows day by day.
+Overflow (repayment exceeds outstanding interest + balance) is silently absorbed — source account is debited only by what was actually applied. Once the loan reaches zero, no further source debits occur (the user's repayment configuration becomes a no-op).
+
+**Scope.** Repayment logic applies to `mortgage`, `personal_loan`, and `car_loan` liability types. `credit_card` repayments are NOT modelled by this primitive (cards lack a fixed monthly repayment — the real-world payment is the statement closing balance or minimum %, both of which require their own logic landing in a later iteration).
+
+**Ordering within a single day.** Cashflows are processed in this order:
+
+1. Income deposits (credit destination)
+2. Expense debits (debit source)
+3. Transfers (asset → asset)
+4. Loan repayments (asset → liability)
+
+This ensures wages land before mortgage debits when both fall on the same day. Daily interest accrual occurs *before* cashflows, so today's accrual uses yesterday's end-of-day offset balance — matching real bank EOD calculation.
+
+**Insufficient source funds.** Engine does not block repayment when the source account lacks balance; the account simply goes negative. Surfacing overdraft is a UI/validation concern (warnings panel, future).
+
+**Offset as source.** Allowed and common: the offset linked to a loan may itself be the loan's repayment source. Engine treats the debit and the offset-link reduction independently.
+
+**Per-entity series.** A loan's per-entity series reports gross debt (`balance + accruedInterest`), not net-of-offset. The offset asset appears as its own series line; net debt position is implicit at the net-worth aggregation layer.
+
+**Liability `endDate`.** Beyond `endDate`, no further repayments fire (interest still accrues if applicable). Future UI may annotate the timeline with a warning if outstanding balance > 0 at endDate.
+
+Offset balance itself fluctuates with normal income/expense/transfer flows day by day.
 
 ### 5.4 Tax
 
@@ -300,7 +330,7 @@ Offset balance fluctuates with income/expense/transfer flows day by day.
 
 ### 5.6 Variable Rate Loans
 
-Manual rate schedule: `variableRates: RatePeriod[]`. Engine looks up applicable rate by date. No base-rate linking, no macro modelling.
+Manual rate schedule: `variableRates: RatePeriod[]`. Engine looks up applicable rate by date. No base-rate linking, no macro modelling. Variable rates compose with offset linkage — the daily rate at date D applies to that day's effective balance.
 
 ### 5.7 Net Worth Formula
 

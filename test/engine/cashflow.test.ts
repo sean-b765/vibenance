@@ -1,8 +1,16 @@
 import { describe, expect, it } from 'vitest'
-import { applyCashFlows, expenseDue, incomeDue, transferDue } from '@/core/engine/cashflow'
+import {
+  applyCashFlows,
+  applyLoanRepayments,
+  expenseDue,
+  incomeDue,
+  loanRepaymentDue,
+  transferDue,
+} from '@/core/engine/cashflow'
 import type { InterestState } from '@/core/engine/interest'
 import type { Expense } from '@/core/schemas/expense'
 import type { Income } from '@/core/schemas/income'
+import type { Liability } from '@/core/schemas/liability'
 import type { Transfer } from '@/core/schemas/transfer'
 
 const ms = (iso: string) => iso
@@ -36,6 +44,20 @@ const baseExpense = (overrides: Partial<Expense> = {}): Expense => ({
   ...overrides,
 })
 
+const baseMortgage = (overrides: Partial<Liability> = {}): Liability => ({
+  id: 'l1',
+  name: 'Mortgage',
+  type: 'mortgage',
+  startDate: ms('2026-01-01T00:00:00.000Z'),
+  snapshots: [{ date: ms('2026-01-01T00:00:00.000Z'), value: 100_000, actual: true }],
+  interest: { type: 'simple', rate: 0 },
+  repayment: 3_000,
+  paymentFrequency: { kind: 'monthly' },
+  sourceAccountId: 'a1',
+  tagIds: [],
+  ...overrides,
+})
+
 const baseTransfer = (overrides: Partial<Transfer> = {}): Transfer => ({
   id: 't1',
   name: 'Savings transfer',
@@ -53,8 +75,9 @@ const scenario = (
   incomes: Income[] = [],
   expenses: Expense[] = [],
   transfers: Transfer[] = [],
+  liabilities: Liability[] = [],
 ) => ({
-  entities: { incomes, expenses, transfers },
+  entities: { incomes, expenses, transfers, liabilities },
 })
 
 describe('incomeDue', () => {
@@ -123,6 +146,38 @@ describe('transferDue', () => {
   })
 })
 
+describe('loanRepaymentDue', () => {
+  it('returns true on the start date for matching cadence', () => {
+    expect(loanRepaymentDue(baseMortgage(), '2026-01-01T00:00:00.000Z')).toBe(true)
+  })
+
+  it('returns true exactly one month later for monthly', () => {
+    expect(loanRepaymentDue(baseMortgage(), '2026-02-01T00:00:00.000Z')).toBe(true)
+  })
+
+  it('returns false on intermediate days', () => {
+    expect(loanRepaymentDue(baseMortgage(), '2026-01-15T00:00:00.000Z')).toBe(false)
+  })
+
+  it('returns false before start date', () => {
+    expect(loanRepaymentDue(baseMortgage(), '2025-12-15T00:00:00.000Z')).toBe(false)
+  })
+
+  it('returns false after end date', () => {
+    const l = baseMortgage({ endDate: '2026-06-01T00:00:00.000Z' })
+    expect(loanRepaymentDue(l, '2026-07-01T00:00:00.000Z')).toBe(false)
+  })
+
+  it('returns false for credit_card type (handled separately)', () => {
+    const l = baseMortgage({ type: 'credit_card' })
+    expect(loanRepaymentDue(l, '2026-01-01T00:00:00.000Z')).toBe(false)
+  })
+
+  it('returns false when repayment is 0', () => {
+    expect(loanRepaymentDue(baseMortgage({ repayment: 0 }), '2026-01-01T00:00:00.000Z')).toBe(false)
+  })
+})
+
 describe('applyCashFlows', () => {
   it('credits destination asset on income day', () => {
     const s = state([['a1', 0]])
@@ -174,5 +229,110 @@ describe('applyCashFlows', () => {
       s,
     )
     expect(s.get('a1')?.balance).toBe(1000)
+  })
+})
+
+describe('applyLoanRepayments', () => {
+  it('debits source account by interestPaid + principalPaid on payment day', () => {
+    const assets = state([['a1', 10_000]])
+    const liabilities: Map<string, InterestState> = new Map([
+      ['l1', { balance: 100_000, accruedInterest: 500 }],
+    ])
+    applyLoanRepayments(
+      '2026-02-01T00:00:00.000Z',
+      scenario([], [], [], [baseMortgage({ repayment: 3_000 })]),
+      assets,
+      liabilities,
+    )
+    expect(assets.get('a1')?.balance).toBe(7_000)
+  })
+
+  it('pays accrued interest first, then principal', () => {
+    const assets = state([['a1', 10_000]])
+    const liabilities: Map<string, InterestState> = new Map([
+      ['l1', { balance: 100_000, accruedInterest: 500 }],
+    ])
+    applyLoanRepayments(
+      '2026-02-01T00:00:00.000Z',
+      scenario([], [], [], [baseMortgage({ repayment: 3_000 })]),
+      assets,
+      liabilities,
+    )
+    expect(liabilities.get('l1')).toEqual({ balance: 97_500, accruedInterest: 0 })
+  })
+
+  it('does nothing on a non-due day', () => {
+    const assets = state([['a1', 10_000]])
+    const liabilities: Map<string, InterestState> = new Map([
+      ['l1', { balance: 100_000, accruedInterest: 500 }],
+    ])
+    applyLoanRepayments(
+      '2026-01-15T00:00:00.000Z',
+      scenario([], [], [], [baseMortgage()]),
+      assets,
+      liabilities,
+    )
+    expect(assets.get('a1')?.balance).toBe(10_000)
+    expect(liabilities.get('l1')).toEqual({ balance: 100_000, accruedInterest: 500 })
+  })
+
+  it('absorbs overflow when repayment exceeds outstanding debt', () => {
+    const assets = state([['a1', 10_000]])
+    const liabilities: Map<string, InterestState> = new Map([
+      ['l1', { balance: 1_000, accruedInterest: 50 }],
+    ])
+    applyLoanRepayments(
+      '2026-02-01T00:00:00.000Z',
+      scenario([], [], [], [baseMortgage({ repayment: 3_000 })]),
+      assets,
+      liabilities,
+    )
+    expect(assets.get('a1')?.balance).toBe(10_000 - 1_050)
+    expect(liabilities.get('l1')).toEqual({ balance: 0, accruedInterest: 0 })
+  })
+
+  it('skips credit_card liabilities', () => {
+    const assets = state([['a1', 10_000]])
+    const liabilities: Map<string, InterestState> = new Map([
+      ['l1', { balance: 2_000, accruedInterest: 0 }],
+    ])
+    applyLoanRepayments(
+      '2026-02-01T00:00:00.000Z',
+      scenario([], [], [], [baseMortgage({ type: 'credit_card', repayment: 500 })]),
+      assets,
+      liabilities,
+    )
+    expect(assets.get('a1')?.balance).toBe(10_000)
+    expect(liabilities.get('l1')?.balance).toBe(2_000)
+  })
+
+  it('source account may go negative (no overdraft guard)', () => {
+    const assets = state([['a1', 100]])
+    const liabilities: Map<string, InterestState> = new Map([
+      ['l1', { balance: 100_000, accruedInterest: 0 }],
+    ])
+    applyLoanRepayments(
+      '2026-02-01T00:00:00.000Z',
+      scenario([], [], [], [baseMortgage({ repayment: 3_000 })]),
+      assets,
+      liabilities,
+    )
+    expect(assets.get('a1')?.balance).toBe(100 - 3_000)
+  })
+
+  it('preserves source accruedInterest when debiting', () => {
+    const assets: Map<string, InterestState> = new Map([
+      ['a1', { balance: 10_000, accruedInterest: 12.34 }],
+    ])
+    const liabilities: Map<string, InterestState> = new Map([
+      ['l1', { balance: 100_000, accruedInterest: 0 }],
+    ])
+    applyLoanRepayments(
+      '2026-02-01T00:00:00.000Z',
+      scenario([], [], [], [baseMortgage({ repayment: 3_000 })]),
+      assets,
+      liabilities,
+    )
+    expect(assets.get('a1')).toEqual({ balance: 7_000, accruedInterest: 12.34 })
   })
 })

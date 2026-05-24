@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
-import { applyRepayment, effectiveBalance } from '@/core/engine/loan'
+import { applyRepayment, effectiveBalance, stepLoanDay } from '@/core/engine/loan'
+import type { Growth } from '@/core/schemas/growth'
 
 describe('loan.effectiveBalance', () => {
   it('returns the loan balance when no offsets are linked', () => {
@@ -20,6 +21,63 @@ describe('loan.effectiveBalance', () => {
 
   it('treats negative offset balances as 0', () => {
     expect(effectiveBalance(500_000, [-1000, 50_000])).toBe(450_000)
+  })
+})
+
+describe('loan.stepLoanDay', () => {
+  const simple = (rate: number): Growth => ({ type: 'simple', rate })
+
+  it('accrues daily interest on raw balance when no offsets', () => {
+    const result = stepLoanDay(
+      { balance: 100_000, accruedInterest: 0 },
+      simple(0.06),
+      [],
+      '2026-01-01T00:00:00.000Z',
+      '2026-01-02T00:00:00.000Z',
+    )
+    expect(result.balance).toBe(100_000)
+    expect(result.accruedInterest).toBeCloseTo(100_000 * (0.06 / 365), 8)
+  })
+
+  it('accrues on effective balance when offsets reduce it', () => {
+    const result = stepLoanDay(
+      { balance: 500_000, accruedInterest: 0 },
+      simple(0.06),
+      [80_000],
+      '2026-01-01T00:00:00.000Z',
+      '2026-01-02T00:00:00.000Z',
+    )
+    expect(result.accruedInterest).toBeCloseTo(420_000 * (0.06 / 365), 8)
+  })
+
+  it('accrues zero when offsets fully cover the loan', () => {
+    const result = stepLoanDay(
+      { balance: 100_000, accruedInterest: 0 },
+      simple(0.06),
+      [150_000],
+      '2026-01-01T00:00:00.000Z',
+      '2026-01-02T00:00:00.000Z',
+    )
+    expect(result.accruedInterest).toBe(0)
+    expect(result.balance).toBe(100_000)
+  })
+
+  it('respects variableRates when computing the daily rate', () => {
+    const growth: Growth = {
+      type: 'simple',
+      rate: 0.06,
+      variableRates: [
+        { rate: 0.10, startDate: '2026-03-01T00:00:00.000Z' },
+      ],
+    }
+    const result = stepLoanDay(
+      { balance: 100_000, accruedInterest: 0 },
+      growth,
+      [],
+      '2026-01-01T00:00:00.000Z',
+      '2026-03-15T00:00:00.000Z',
+    )
+    expect(result.accruedInterest).toBeCloseTo(100_000 * (0.10 / 365), 8)
   })
 })
 

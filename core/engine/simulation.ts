@@ -1,5 +1,6 @@
-import { applyCashFlows } from '@/core/engine/cashflow'
+import { applyCashFlows, applyLoanRepayments } from '@/core/engine/cashflow'
 import { stepDay, type InterestState } from '@/core/engine/interest'
+import { stepLoanDay } from '@/core/engine/loan'
 import type { SeriesPoint } from '@/core/engine/series'
 import { latest } from '@/core/engine/snapshots'
 import type { Asset } from '@/core/schemas/asset'
@@ -48,6 +49,32 @@ const stepEntities = <T extends { id: string; startDate: string; snapshots: { da
   }
 }
 
+const buildOffsetIndex = (assets: Asset[]): Map<string, string[]> => {
+  const index = new Map<string, string[]>()
+  for (const a of assets) {
+    if (a.type !== 'account_offset' || !a.linkedLiabilityId) continue
+    const list = index.get(a.linkedLiabilityId) ?? []
+    list.push(a.id)
+    index.set(a.linkedLiabilityId, list)
+  }
+  return index
+}
+
+const stepLiabilities = (
+  liabilityState: EntityState,
+  liabilities: Liability[],
+  assetState: EntityState,
+  offsetIndex: Map<string, string[]>,
+  currentDate: string,
+): void => {
+  for (const l of liabilities) {
+    const current = liabilityState.get(l.id) ?? { balance: 0, accruedInterest: 0 }
+    const offsetIds = offsetIndex.get(l.id) ?? []
+    const offsetBalances = offsetIds.map((id) => assetState.get(id)?.balance ?? 0)
+    liabilityState.set(l.id, stepLoanDay(current, l.interest, offsetBalances, l.startDate, currentDate))
+  }
+}
+
 const totalValue = (state: EntityState): number => {
   let sum = 0
   for (const s of state.values()) sum += s.balance + s.accruedInterest
@@ -87,12 +114,14 @@ export const simulate = (scenario: Scenario, fromDate: string, toDate: string): 
 
   const series: SeriesPoint[] = []
   const entities = buildEntitySeriesShells(assets, liabilities)
+  const offsetIndex = buildOffsetIndex(assets)
 
   for (const day of eachDay(fromDate, toDate)) {
     if (day !== fromDate) {
       stepEntities<Asset>(assetState, assets, (a) => a.growth, day)
-      stepEntities<Liability>(liabilityState, liabilities, (l) => l.interest, day)
+      stepLiabilities(liabilityState, liabilities, assetState, offsetIndex, day)
       applyCashFlows(day, scenario, assetState)
+      applyLoanRepayments(day, scenario, assetState, liabilityState)
     }
 
     series.push({

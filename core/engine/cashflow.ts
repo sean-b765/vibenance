@@ -1,8 +1,16 @@
+import { applyRepayment } from '@/core/engine/loan'
 import { isDue } from '@/core/engine/schedule'
 import type { InterestState } from '@/core/engine/interest'
 import type { Expense } from '@/core/schemas/expense'
 import type { Income } from '@/core/schemas/income'
+import type { Liability } from '@/core/schemas/liability'
 import type { Transfer } from '@/core/schemas/transfer'
+
+const REPAYABLE_LIABILITY_TYPES: ReadonlySet<Liability['type']> = new Set([
+  'mortgage',
+  'personal_loan',
+  'car_loan',
+])
 
 export type AssetState = Map<string, InterestState>
 
@@ -38,6 +46,13 @@ export const expenseDue = (expense: Expense, day: string): boolean => {
   return isDue(expense.frequency, expense.startDate, day)
 }
 
+export const loanRepaymentDue = (liability: Liability, day: string): boolean => {
+  if (!REPAYABLE_LIABILITY_TYPES.has(liability.type)) return false
+  if (liability.repayment <= 0) return false
+  if (!within(liability.startDate, liability.endDate, day)) return false
+  return isDue(liability.paymentFrequency, liability.startDate, day)
+}
+
 export const transferDue = (transfer: Transfer, day: string): boolean => {
   if (!within(transfer.startDate, transfer.endDate, day)) return false
   if (transfer.type === 'one-off') return onSameDay(transfer.startDate, day)
@@ -62,5 +77,27 @@ export const applyCashFlows = (
       credit(assetState, transfer.sourceAccountId, -transfer.amount)
       credit(assetState, transfer.destinationAccountId, transfer.amount)
     }
+  }
+}
+
+export type LiabilityState = Map<string, InterestState>
+
+export const applyLoanRepayments = (
+  day: string,
+  scenario: { entities: { liabilities: Liability[] } },
+  assetState: AssetState,
+  liabilityState: LiabilityState,
+): void => {
+  for (const liability of scenario.entities.liabilities) {
+    if (!loanRepaymentDue(liability, day)) continue
+    const current = liabilityState.get(liability.id)
+    if (!current) continue
+    const result = applyRepayment(current, liability.repayment)
+    const actualDebit = result.interestPaid + result.principalPaid
+    if (actualDebit > 0) credit(assetState, liability.sourceAccountId, -actualDebit)
+    liabilityState.set(liability.id, {
+      balance: result.newBalance,
+      accruedInterest: result.remainingAccrued,
+    })
   }
 }

@@ -327,6 +327,193 @@ describe('simulation.simulate', () => {
     expect(result.series[result.series.length - 1]?.value).toBe(1_000)
   })
 
+  it('debits source account on monthly mortgage repayment day', () => {
+    const scenario = makeScenario({
+      entities: {
+        ...emptyEntities,
+        assets: [
+          cashAsset({
+            id: 'a1',
+            snapshots: [{ date: '2026-01-01T00:00:00.000Z', value: 10_000, actual: true }],
+          }),
+        ],
+        liabilities: [
+          mortgageLiability({
+            id: 'l1',
+            repayment: 3_000,
+            paymentFrequency: { kind: 'monthly' },
+            sourceAccountId: 'a1',
+            interest: { type: 'simple', rate: 0 },
+          }),
+        ],
+      },
+    })
+    const result = simulate(scenario, '2026-01-01T00:00:00.000Z', '2026-02-02T00:00:00.000Z')
+    const a1 = result.entities.find((e) => e.id === 'a1')!
+    const l1 = result.entities.find((e) => e.id === 'l1')!
+    // Repayment on 2026-02-01 (day index 31): cash $10k → $7k, loan $100k → $97k
+    expect(a1.points[31]?.value).toBe(7_000)
+    expect(l1.points[31]?.value).toBe(97_000)
+  })
+
+  it('offset account reduces loan interest accrual', () => {
+    const scenario = makeScenario({
+      entities: {
+        ...emptyEntities,
+        assets: [
+          cashAsset({
+            id: 'offset',
+            type: 'account_offset',
+            linkedLiabilityId: 'l1',
+            snapshots: [{ date: '2026-01-01T00:00:00.000Z', value: 80_000, actual: true }],
+          }),
+        ],
+        liabilities: [
+          mortgageLiability({
+            id: 'l1',
+            interest: { type: 'simple', rate: 0.06 },
+            repayment: 0,
+            snapshots: [{ date: '2026-01-01T00:00:00.000Z', value: 500_000, actual: true }],
+          }),
+        ],
+      },
+    })
+    const result = simulate(scenario, '2026-01-01T00:00:00.000Z', '2026-01-04T00:00:00.000Z')
+    const l1 = result.entities.find((e) => e.id === 'l1')!
+    // Effective base = 500k - 80k = 420k; daily accrual = 420k * 0.06/365.
+    const dailyAccrual = 420_000 * (0.06 / 365)
+    expect(l1.points[0]?.value).toBe(500_000)
+    expect(l1.points[1]?.value).toBeCloseTo(500_000 + dailyAccrual, 6)
+    expect(l1.points[3]?.value).toBeCloseTo(500_000 + 3 * dailyAccrual, 6)
+  })
+
+  it('only account_offset type counts as offset; other linked types are ignored', () => {
+    const scenario = makeScenario({
+      entities: {
+        ...emptyEntities,
+        assets: [
+          cashAsset({
+            id: 'savings',
+            type: 'account_savings',
+            linkedLiabilityId: 'l1',
+            snapshots: [{ date: '2026-01-01T00:00:00.000Z', value: 80_000, actual: true }],
+          }),
+        ],
+        liabilities: [
+          mortgageLiability({
+            id: 'l1',
+            interest: { type: 'simple', rate: 0.06 },
+            repayment: 0,
+          }),
+        ],
+      },
+    })
+    const result = simulate(scenario, '2026-01-01T00:00:00.000Z', '2026-01-02T00:00:00.000Z')
+    const l1 = result.entities.find((e) => e.id === 'l1')!
+    // Savings account does NOT offset; full balance accrues.
+    expect(l1.points[1]?.value).toBeCloseTo(100_000 + 100_000 * (0.06 / 365), 6)
+  })
+
+  it('e2e: offset+mortgage with wage income, repayment debits offset, accrual reflects effective balance', () => {
+    const scenario = makeScenario({
+      entities: {
+        ...emptyEntities,
+        assets: [
+          cashAsset({
+            id: 'cash',
+            type: 'account_cash',
+            snapshots: [{ date: '2026-01-01T00:00:00.000Z', value: 5_000, actual: true }],
+          }),
+          cashAsset({
+            id: 'offset',
+            type: 'account_offset',
+            linkedLiabilityId: 'l1',
+            snapshots: [{ date: '2026-01-01T00:00:00.000Z', value: 80_000, actual: true }],
+          }),
+        ],
+        liabilities: [
+          mortgageLiability({
+            id: 'l1',
+            interest: { type: 'simple', rate: 0.06 },
+            repayment: 3_000,
+            paymentFrequency: { kind: 'monthly' },
+            sourceAccountId: 'offset',
+            snapshots: [{ date: '2026-01-01T00:00:00.000Z', value: 500_000, actual: true }],
+          }),
+        ],
+        incomes: [
+          {
+            id: 'i1',
+            name: 'Wage',
+            type: 'wage',
+            amount: 2_000,
+            pretax: false,
+            destinationAccountId: 'offset',
+            frequency: { kind: 'weekly' },
+            startDate: '2026-01-01T00:00:00.000Z',
+            tagIds: [],
+          },
+        ],
+      },
+    })
+    const result = simulate(scenario, '2026-01-01T00:00:00.000Z', '2026-02-02T00:00:00.000Z')
+    const offset = result.entities.find((e) => e.id === 'offset')!
+    const loan = result.entities.find((e) => e.id === 'l1')!
+
+    // Weekly wages deposited (Jan 8, 15, 22, 29) → +$8k to offset.
+    // Repayment on Feb 1 debits offset by $3k.
+    // Day 31 (Feb 1) offset balance = 80k + 4*2k - 3k = 85k (after repayment).
+    expect(offset.points[31]?.value).toBe(80_000 + 4 * 2_000 - 3_000)
+
+    // Loan accrued daily on effective balance (which shrinks as offset grows).
+    // Day 0: snapshot 500k, no accrual yet.
+    expect(loan.points[0]?.value).toBe(500_000)
+    // Repayment day reduces loan by (3000 - accruedInterest). Loan still > 0.
+    expect(loan.points[31]!.value).toBeLessThan(500_000)
+    expect(loan.points[31]!.value).toBeGreaterThan(497_000)
+  })
+
+  it('e2e: variable rate change mid-simulation affects offset-adjusted accrual', () => {
+    const scenario = makeScenario({
+      entities: {
+        ...emptyEntities,
+        assets: [
+          cashAsset({
+            id: 'offset',
+            type: 'account_offset',
+            linkedLiabilityId: 'l1',
+            snapshots: [{ date: '2026-01-01T00:00:00.000Z', value: 100_000, actual: true }],
+          }),
+        ],
+        liabilities: [
+          mortgageLiability({
+            id: 'l1',
+            interest: {
+              type: 'simple',
+              rate: 0.06,
+              variableRates: [
+                { rate: 0.10, startDate: '2026-01-03T00:00:00.000Z' },
+              ],
+            },
+            repayment: 0,
+            snapshots: [{ date: '2026-01-01T00:00:00.000Z', value: 500_000, actual: true }],
+          }),
+        ],
+      },
+    })
+    const result = simulate(scenario, '2026-01-01T00:00:00.000Z', '2026-01-04T00:00:00.000Z')
+    const loan = result.entities.find((e) => e.id === 'l1')!
+    // Effective base 400k throughout.
+    // Day 1 (Jan 2): rate still 0.06 → +400k * 0.06/365
+    // Day 2 (Jan 3): rate switches to 0.10 → +400k * 0.10/365
+    // Day 3 (Jan 4): rate 0.10 → +400k * 0.10/365
+    const a1 = 400_000 * (0.06 / 365)
+    const a2 = 400_000 * (0.10 / 365)
+    expect(loan.points[1]?.value).toBeCloseTo(500_000 + a1, 6)
+    expect(loan.points[2]?.value).toBeCloseTo(500_000 + a1 + a2, 6)
+    expect(loan.points[3]?.value).toBeCloseTo(500_000 + a1 + 2 * a2, 6)
+  })
+
   it('accrues liability interest, increasing the debt over time', () => {
     const scenario = makeScenario({
       entities: {
