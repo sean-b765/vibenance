@@ -1,3 +1,5 @@
+import type { Warning } from "@/core/validation/warnings.ts"
+
 export type WarningCode =
   | 'snapshot_negative'
   | 'negative_amortisation'
@@ -19,12 +21,11 @@ const interpolate = (template: string, params?: Record<string, unknown>): string
 }
 
 export const renderWarning = (
-  entityName: string,
-  code: WarningCode,
-  params?: Record<string, unknown>,
+  warning: Warning,
 ): string => {
-  const body = interpolate(messages[code], params)
-  return `${entityName}: ${body}.`
+  const body = interpolate(messages[warning.code], warning.messageParams)
+  if (warning.entityType === 'scenario') return body
+  return `${warning.entityName}: ${body}.`
 }
 
 export const warningMessage = (code: WarningCode): string => messages[code]

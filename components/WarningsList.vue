@@ -23,8 +23,7 @@ const onSelect = (w: Warning) => emit('select', w)
       @click="onSelect(w)"
     >
       <AlertTriangle class="size-4 mt-0.5 shrink-0 text-amber-500" />
-      <span>{{ renderWarning(w.entityName, w.code, w.messageParams) }}</span>
+      <span>{{ renderWarning(w) }}</span>
     </li>
   </ul>
-  <p v-else class="text-sm text-muted-foreground">No warnings.</p>
 </template>

@@ -20,7 +20,7 @@ defineProps<{ warnings: Warning[] }>()
       <TooltipContent>
         <ul class="space-y-0.5">
           <li v-for="(w, i) in warnings" :key="`${w.code}-${i}`">
-            {{ renderWarning(w.entityName, w.code, w.messageParams) }}
+            {{ renderWarning(w) }}
           </li>
         </ul>
       </TooltipContent>
