@@ -74,7 +74,6 @@ describe('W1 snapshot_negative', () => {
     const w = checkAsset(a)
     expect(w).toHaveLength(1)
     expect(w[0]?.code).toBe('snapshot_negative')
-    expect(w[0]?.severity).toBe('warn')
   })
 
   it('does not flag positive snapshot', () => {
@@ -196,7 +195,7 @@ describe('W18 liability_orphan', () => {
 })
 
 describe('validateScenario', () => {
-  it('aggregates + sorts warn before info', () => {
+  it('aggregates warnings across entities', () => {
     const scenario: Scenario = {
       id: 's1',
       name: 'Base',
@@ -218,7 +217,5 @@ describe('validateScenario', () => {
     }
     const w = validateScenario(scenario)
     expect(w.length).toBeGreaterThanOrEqual(2)
-    expect(w[0]?.severity).toBe('warn')
-    expect(w[w.length - 1]?.severity).toBe('info')
   })
 })

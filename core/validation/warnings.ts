@@ -6,13 +6,10 @@ import type { Liability } from '@/core/schemas/liability'
 import type { Scenario } from '@/core/schemas/scenario'
 import type { WarningCode } from '@/core/i18n/warnings'
 
-export type WarningSeverity = 'info' | 'warn'
-
 export type EntityType = 'asset' | 'liability' | 'income' | 'expense' | 'scenario'
 
 export type Warning = {
   code: WarningCode
-  severity: WarningSeverity
   messageKey: WarningCode
   messageParams?: Record<string, unknown>
   entityId: string
@@ -58,7 +55,6 @@ export const checkAsset = (asset: Asset): Warning[] => {
     if (s.value < 0) {
       out.push({
         code: 'snapshot_negative',
-        severity: 'warn',
         messageKey: 'snapshot_negative',
         entityId: asset.id,
         entityName: asset.name,
@@ -79,7 +75,6 @@ export const checkLiability = (l: Liability, ctx: ValidationContext): Warning[] 
     if (!skipRevolving) {
       out.push({
         code: 'repayment_zero',
-        severity: 'info',
         messageKey: 'repayment_zero',
         entityId: l.id,
         entityName: l.name,
@@ -95,7 +90,6 @@ export const checkLiability = (l: Liability, ctx: ValidationContext): Warning[] 
     if (l.repayment < perPeriodAccrual) {
       out.push({
         code: 'negative_amortisation',
-        severity: 'warn',
         messageKey: 'negative_amortisation',
         entityId: l.id,
         entityName: l.name,
@@ -111,7 +105,6 @@ export const checkLiability = (l: Liability, ctx: ValidationContext): Warning[] 
     if (!linked) {
       out.push({
         code: 'liability_orphan',
-        severity: 'info',
         messageKey: 'liability_orphan',
         messageParams: { type: l.type.replace('_', ' ') },
         entityId: l.id,
@@ -141,7 +134,6 @@ export const checkBurnRate = (
     return [
       {
         code: 'expense_exceeds_income',
-        severity: 'warn',
         messageKey: 'expense_exceeds_income',
         entityId: scenarioId,
         entityName: scenarioName,
@@ -170,8 +162,5 @@ export const validateScenario = (scenario: Scenario): Warning[] => {
       scenario.entities.expenses,
     ),
   )
-  return out.sort((a, b) => {
-    if (a.severity === b.severity) return 0
-    return a.severity === 'warn' ? -1 : 1
-  })
+  return out
 }

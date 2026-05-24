@@ -28,6 +28,12 @@ const scenarioWarnings = computed<Warning[]>(() => {
   if (!id) return []
   return warningsStore.warningsByScenario[id] ?? []
 })
+const scenarioLevelWarnings = computed<Warning[]>(() =>
+  scenarioWarnings.value.filter((w) => w.entityType === 'scenario'),
+)
+const entityLevelWarnings = computed<Warning[]>(() =>
+  scenarioWarnings.value.filter((w) => w.entityType !== 'scenario'),
+)
 const showWarnings = ref(true)
 
 const fireSummaryToast = () => {
@@ -205,6 +211,15 @@ const expenseTotal = computed(() =>
   <div v-if="!scenario" class="text-muted-foreground">Scenario not found.</div>
 
   <div v-else class="space-y-6">
+    <Card v-if="scenarioLevelWarnings.length > 0">
+      <CardHeader>
+        <CardTitle>Scenario warnings ({{ scenarioLevelWarnings.length }})</CardTitle>
+      </CardHeader>
+      <CardContent>
+        <WarningsList :warnings="scenarioLevelWarnings" @select="goToWarning" />
+      </CardContent>
+    </Card>
+
     <header class="flex items-center gap-3">
       <label class="relative cursor-pointer" title="Change colour">
         <span class="block w-5 h-5 rounded-full border border-border" :style="{ background: scenario.colour }" />
@@ -408,15 +423,15 @@ const expenseTotal = computed(() =>
       </div>
     </section>
 
-    <Card v-if="scenarioWarnings.length > 0">
+    <Card v-if="entityLevelWarnings.length > 0">
       <CardHeader class="flex flex-row items-center justify-between space-y-0">
-        <CardTitle>Warnings ({{ scenarioWarnings.length }})</CardTitle>
+        <CardTitle>Entity warnings ({{ entityLevelWarnings.length }})</CardTitle>
         <Button variant="ghost" size="sm" @click="showWarnings = !showWarnings">
           {{ showWarnings ? 'Hide' : 'Show' }}
         </Button>
       </CardHeader>
       <CardContent v-if="showWarnings">
-        <WarningsList :warnings="scenarioWarnings" @select="goToWarning" />
+        <WarningsList :warnings="entityLevelWarnings" @select="goToWarning" />
       </CardContent>
     </Card>
 

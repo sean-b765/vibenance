@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { AlertTriangle, Info } from 'lucide-vue-next'
+import { AlertTriangle } from 'lucide-vue-next'
 import { renderWarning } from '@/core/i18n/warnings'
 import type { Warning } from '@/core/validation/warnings'
 
@@ -22,11 +22,7 @@ const onSelect = (w: Warning) => emit('select', w)
       class="flex items-start gap-2 text-sm rounded px-2 py-1 hover:bg-muted cursor-pointer"
       @click="onSelect(w)"
     >
-      <AlertTriangle
-        v-if="w.severity === 'warn'"
-        class="size-4 mt-0.5 shrink-0 text-amber-500"
-      />
-      <Info v-else class="size-4 mt-0.5 shrink-0 text-blue-500" />
+      <AlertTriangle class="size-4 mt-0.5 shrink-0 text-amber-500" />
       <span>{{ renderWarning(w.entityName, w.code, w.messageParams) }}</span>
     </li>
   </ul>

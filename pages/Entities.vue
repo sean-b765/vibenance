@@ -3,6 +3,7 @@ import { computed, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import AppSelect from '@/components/forms/AppSelect.vue'
 import AssetForm from '@/components/forms/AssetForm.vue'
+import EntityWarningChips from '@/components/EntityWarningChips.vue'
 import ExpenseForm from '@/components/forms/ExpenseForm.vue'
 import IncomeForm from '@/components/forms/IncomeForm.vue'
 import LiabilityForm from '@/components/forms/LiabilityForm.vue'
@@ -13,12 +14,26 @@ import type { Asset } from '@/core/schemas/asset'
 import type { Expense } from '@/core/schemas/expense'
 import type { Income } from '@/core/schemas/income'
 import type { Liability } from '@/core/schemas/liability'
+import type { Warning } from '@/core/validation/warnings'
 import { useScenariosStore } from '@/stores/scenarios'
+import { useWarningsStore } from '@/stores/warnings'
 import { formatCurrency } from '@/utils/format'
 
 const scenarios = useScenariosStore()
+const warningsStore = useWarningsStore()
 const route = useRoute()
 const router = useRouter()
+
+const warningsByEntity = computed<Record<string, Warning[]>>(() => {
+  const out: Record<string, Warning[]> = {}
+  for (const w of warningsStore.activeScenarioWarnings) {
+    if (w.entityType === 'scenario') continue
+    if (!out[w.entityId]) out[w.entityId] = []
+    out[w.entityId]!.push(w)
+  }
+  return out
+})
+const warningsFor = (id: string): Warning[] => warningsByEntity.value[id] ?? []
 
 const expandedId = ref<string | null>(null)
 
@@ -144,12 +159,9 @@ const submitSnapshot = (kind: 'assets' | 'liabilities', id: string) => {
       </div>
       <div class="flex items-center gap-2">
         <div class="min-w-[220px]">
-          <AppSelect
-            :model-value="scenarioId ?? ''"
+          <AppSelect :model-value="scenarioId ?? ''"
             :options="scenarios.scenarios.map((s) => ({ value: s.id, label: s.name, colour: s.colour }))"
-            placeholder="Scenario"
-            @update:model-value="(v) => v && scenarios.setActive(String(v))"
-          />
+            placeholder="Scenario" @update:model-value="(v) => v && scenarios.setActive(String(v))" />
         </div>
         <Input v-model="filter" placeholder="Filter by name" class="w-72" />
       </div>
@@ -164,50 +176,30 @@ const submitSnapshot = (kind: 'assets' | 'liabilities', id: string) => {
         </Button>
       </div>
       <div v-if="newCategory === 'asset'" class="mb-3">
-        <AssetForm
-          :liabilities="allLiabilities"
-          @save="saveAsset"
-          @cancel="newCategory = null"
-          @delete="() => {}"
-        />
+        <AssetForm :liabilities="allLiabilities" @save="saveAsset" @cancel="newCategory = null" @delete="() => { }" />
       </div>
       <ul class="divide-y border border-border rounded bg-card">
         <li v-for="a in assets" :key="a.id">
-          <Button
-            variant="ghost"
-            class="w-full justify-start gap-3 p-3 h-auto font-normal rounded-none"
-            @click="toggleExpand(a.id)"
-          >
-            <span class="flex-1 font-medium text-start">{{ a.name }}</span>
+          <Button variant="ghost" class="w-full justify-start gap-3 p-3 h-auto font-normal rounded-none"
+            @click="toggleExpand(a.id)">
+            <div class="flex-1 text-start">
+              <span class="flex-1 font-medium text-start">{{ a.name }}</span>
+              <EntityWarningChips class="ml-2" :warnings="warningsFor(a.id)" />
+            </div>
             <span class="text-xs text-muted-foreground">{{ a.type }}</span>
             <span class="text-sm font-mono">{{ formatCurrency(lastSnapshotValue(a.snapshots) ?? 0) }}</span>
             <span class="text-muted-foreground">{{ expandedId === a.id ? '▾' : '▸' }}</span>
           </Button>
           <div v-if="expandedId === a.id && scenarioId" class="p-3 space-y-3 border-t border-border">
-            <AssetForm
-              :asset="a"
-              :liabilities="allLiabilities"
-              @save="saveAsset"
-              @cancel="expandedId = null"
-              @delete="removeAsset"
-            />
+            <AssetForm :asset="a" :liabilities="allLiabilities" @save="saveAsset" @cancel="expandedId = null"
+              @delete="removeAsset" />
             <MoveCloneBar :from-scenario-id="scenarioId" :entity-id="a.id" kind="assets" />
             <div class="flex items-center gap-2 p-3 bg-card rounded-md border">
               <span class="text-xs uppercase text-muted-foreground">Log balance update</span>
-              <Input
-                v-model="newSnapshotValue"
-                type="number"
-                step="0.01"
-                placeholder="New balance"
-                class="flex-1"
-                @focus="startSnapshot(a.id)"
-              />
-              <Button
-                size="sm"
-                variant="outline"
-                :disabled="snapshotTargetId !== a.id || newSnapshotValue === ''"
-                @click="submitSnapshot('assets', a.id)"
-              >
+              <Input v-model="newSnapshotValue" type="number" step="0.01" placeholder="New balance" class="flex-1"
+                @focus="startSnapshot(a.id)" />
+              <Button size="sm" variant="outline" :disabled="snapshotTargetId !== a.id || newSnapshotValue === ''"
+                @click="submitSnapshot('assets', a.id)">
                 Append snapshot
               </Button>
             </div>
@@ -226,50 +218,32 @@ const submitSnapshot = (kind: 'assets' | 'liabilities', id: string) => {
         </Button>
       </div>
       <div v-if="newCategory === 'liability'" class="mb-3">
-        <LiabilityForm
-          :assets="allAssets"
-          @save="saveLiability"
-          @cancel="newCategory = null"
-          @delete="() => {}"
-        />
+        <LiabilityForm :assets="allAssets" @save="saveLiability" @cancel="newCategory = null" @delete="() => { }" />
       </div>
       <ul class="divide-y border border-border rounded bg-card">
         <li v-for="l in liabilities" :key="l.id">
-          <Button
-            variant="ghost"
-            class="w-full justify-start gap-3 p-3 h-auto font-normal rounded-none"
-            @click="toggleExpand(l.id)"
-          >
-            <span class="flex-1 font-medium text-start">{{ l.name }}</span>
+          <Button variant="ghost" class="w-full justify-start gap-3 p-3 h-auto font-normal rounded-none"
+            @click="toggleExpand(l.id)">
+            <div class="flex-1 text-start">
+              <span class="flex-1 font-medium text-start">{{ l.name }}</span>
+              <EntityWarningChips class="ml-2" :warnings="warningsFor(l.id)" />
+            </div>
             <span class="text-xs text-muted-foreground">{{ l.type }}</span>
-            <span class="text-sm font-mono text-red-600">{{ formatCurrency(lastSnapshotValue(l.snapshots) ?? 0) }}</span>
+            <span class="text-sm font-mono text-red-600">
+              {{ formatCurrency(lastSnapshotValue(l.snapshots) ?? 0) }}
+            </span>
             <span class="text-muted-foreground">{{ expandedId === l.id ? '▾' : '▸' }}</span>
           </Button>
           <div v-if="expandedId === l.id && scenarioId" class="p-3 space-y-3 border-t border-border">
-            <LiabilityForm
-              :liability="l"
-              :assets="allAssets"
-              @save="saveLiability"
-              @cancel="expandedId = null"
-              @delete="removeLiability"
-            />
+            <LiabilityForm :liability="l" :assets="allAssets" @save="saveLiability" @cancel="expandedId = null"
+              @delete="removeLiability" />
             <MoveCloneBar :from-scenario-id="scenarioId" :entity-id="l.id" kind="liabilities" />
             <div class="flex items-center gap-2 p-3 bg-card rounded-md border">
               <span class="text-xs uppercase text-muted-foreground">Log balance update</span>
-              <Input
-                v-model="newSnapshotValue"
-                type="number"
-                step="0.01"
-                placeholder="New balance"
-                class="flex-1"
-                @focus="startSnapshot(l.id)"
-              />
-              <Button
-                size="sm"
-                variant="outline"
-                :disabled="snapshotTargetId !== l.id || newSnapshotValue === ''"
-                @click="submitSnapshot('liabilities', l.id)"
-              >
+              <Input v-model="newSnapshotValue" type="number" step="0.01" placeholder="New balance" class="flex-1"
+                @focus="startSnapshot(l.id)" />
+              <Button size="sm" variant="outline" :disabled="snapshotTargetId !== l.id || newSnapshotValue === ''"
+                @click="submitSnapshot('liabilities', l.id)">
                 Append snapshot
               </Button>
             </div>
@@ -288,33 +262,23 @@ const submitSnapshot = (kind: 'assets' | 'liabilities', id: string) => {
         </Button>
       </div>
       <div v-if="newCategory === 'income'" class="mb-3">
-        <IncomeForm
-          :assets="allAssets"
-          @save="saveIncome"
-          @cancel="newCategory = null"
-          @delete="() => {}"
-        />
+        <IncomeForm :assets="allAssets" @save="saveIncome" @cancel="newCategory = null" @delete="() => { }" />
       </div>
       <ul class="divide-y border border-border rounded bg-card">
         <li v-for="i in incomes" :key="i.id">
-          <Button
-            variant="ghost"
-            class="w-full justify-start gap-3 p-3 h-auto font-normal rounded-none"
-            @click="toggleExpand(i.id)"
-          >
-            <span class="flex-1 font-medium text-start">{{ i.name }}</span>
+          <Button variant="ghost" class="w-full justify-start gap-3 p-3 h-auto font-normal rounded-none"
+            @click="toggleExpand(i.id)">
+            <div class="flex-1 text-start">
+              <span class="flex-1 font-medium text-start">{{ i.name }}</span>
+              <EntityWarningChips class="ml-2" :warnings="warningsFor(i.id)" />
+            </div>
             <span class="text-xs text-muted-foreground">{{ i.type }} · {{ i.frequency?.kind ?? 'one-off' }}</span>
             <span class="text-sm font-mono">{{ formatCurrency(i.amount) }}</span>
             <span class="text-muted-foreground">{{ expandedId === i.id ? '▾' : '▸' }}</span>
           </Button>
           <div v-if="expandedId === i.id && scenarioId" class="p-3 space-y-3 border-t border-border">
-            <IncomeForm
-              :income="i"
-              :assets="allAssets"
-              @save="saveIncome"
-              @cancel="expandedId = null"
-              @delete="removeIncome"
-            />
+            <IncomeForm :income="i" :assets="allAssets" @save="saveIncome" @cancel="expandedId = null"
+              @delete="removeIncome" />
             <MoveCloneBar :from-scenario-id="scenarioId" :entity-id="i.id" kind="incomes" />
           </div>
         </li>
@@ -331,33 +295,23 @@ const submitSnapshot = (kind: 'assets' | 'liabilities', id: string) => {
         </Button>
       </div>
       <div v-if="newCategory === 'expense'" class="mb-3">
-        <ExpenseForm
-          :assets="allAssets"
-          @save="saveExpense"
-          @cancel="newCategory = null"
-          @delete="() => {}"
-        />
+        <ExpenseForm :assets="allAssets" @save="saveExpense" @cancel="newCategory = null" @delete="() => { }" />
       </div>
       <ul class="divide-y border border-border rounded bg-card">
         <li v-for="e in expenses" :key="e.id">
-          <Button
-            variant="ghost"
-            class="w-full justify-start gap-3 p-3 h-auto font-normal rounded-none"
-            @click="toggleExpand(e.id)"
-          >
-            <span class="flex-1 font-medium text-start">{{ e.name }}</span>
+          <Button variant="ghost" class="w-full justify-start gap-3 p-3 h-auto font-normal rounded-none"
+            @click="toggleExpand(e.id)">
+            <div class="flex-1 text-start">
+              <span class="flex-1 font-medium text-start">{{ e.name }}</span>
+              <EntityWarningChips class="ml-2" :warnings="warningsFor(e.id)" />
+            </div>
             <span class="text-xs text-muted-foreground">{{ e.type }} · {{ e.frequency?.kind ?? 'one-off' }}</span>
             <span class="text-sm font-mono text-red-600">{{ formatCurrency(e.amount) }}</span>
             <span class="text-muted-foreground">{{ expandedId === e.id ? '▾' : '▸' }}</span>
           </Button>
           <div v-if="expandedId === e.id && scenarioId" class="p-3 space-y-3 border-t border-border">
-            <ExpenseForm
-              :expense="e"
-              :assets="allAssets"
-              @save="saveExpense"
-              @cancel="expandedId = null"
-              @delete="removeExpense"
-            />
+            <ExpenseForm :expense="e" :assets="allAssets" @save="saveExpense" @cancel="expandedId = null"
+              @delete="removeExpense" />
             <MoveCloneBar :from-scenario-id="scenarioId" :entity-id="e.id" kind="expenses" />
           </div>
         </li>
