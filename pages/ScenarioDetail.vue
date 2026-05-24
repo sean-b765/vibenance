@@ -44,7 +44,7 @@ const showWarnings = ref(true)
 const fireSummaryToast = () => {
   const count = scenarioWarnings.value.length
   if (count === 0) return
-  toast.warning(`${count} ${count === 1 ? 'warning' : 'warnings'} in ${scenarios.scenarios.find((s) => s.id === route.params.id)?.name ?? 'scenario'}`)
+  toast.warning(`${count} ${count === 1 ? 'warning' : 'warnings'} in scenario`)
 }
 
 onMounted(fireSummaryToast)

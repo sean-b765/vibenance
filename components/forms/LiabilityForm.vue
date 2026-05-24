@@ -14,6 +14,7 @@ import type { FrequencyKind } from '@/core/schemas/frequency'
 import { liabilitySchema, type Liability, type LiabilityType } from '@/core/schemas/liability'
 import { checkLiability, type Warning } from '@/core/validation/warnings'
 import { fromDateInput, requireDateInput, toDateInput } from '@/utils/dateInput'
+import { zodErrors } from '@/core/validation/warnings'
 
 const props = defineProps<{
   liability?: Liability
@@ -95,6 +96,7 @@ watch(
 )
 
 const error = ref('')
+const errors = ref<Record<string, string>>({})
 
 const buildCandidate = (): Liability => {
   const existing = props.liability
@@ -117,7 +119,7 @@ const buildCandidate = (): Liability => {
     },
     repayment: Number(state.repayment),
     paymentFrequency: { kind: state.paymentFrequency },
-    sourceAccountId: state.sourceAccountId || '00000000-0000-0000-0000-000000000000',
+    sourceAccountId: state.sourceAccountId,
     tagIds: existing?.tagIds ?? [],
   }
   const end = fromDateInput(state.endDate)
@@ -146,9 +148,11 @@ const warningsForField = (field: string) =>
 
 const save = () => {
   error.value = ''
+  errors.value = {}
   const candidate = buildCandidate()
   const parsed = liabilitySchema.safeParse(candidate)
   if (!parsed.success) {
+    errors.value = zodErrors(parsed.error.issues)
     const msg = parsed.error.issues[0]?.message ?? 'Invalid liability'
     error.value = msg
     toast.error(`Save failed: ${msg}`)
@@ -163,58 +167,85 @@ const save = () => {
     class="grid grid-cols-1 md:grid-cols-2 gap-4 p-4 bg-muted/40 rounded-md border"
     @submit.prevent="save"
   >
-    <FormRow label="Name">
-      <Input v-model="state.name" required />
+    <FormRow label="Name" required :error="errors.name">
+      <Input v-model="state.name" required :aria-invalid="!!errors.name" />
     </FormRow>
-    <FormRow label="Type">
+    <FormRow label="Type" :error="errors.type">
       <AppSelect v-model="state.type" :options="liabilityTypeOptions" />
     </FormRow>
-    <FormRow label="Start date">
-      <Input v-model="state.startDate" type="date" />
+    <FormRow label="Start date" required :error="errors.startDate">
+      <Input v-model="state.startDate" type="date" :aria-invalid="!!errors.startDate" />
     </FormRow>
-    <FormRow label="End date (optional)">
-      <Input v-model="state.endDate" type="date" />
+    <FormRow label="End date" :error="errors.endDate">
+      <Input v-model="state.endDate" type="date" :aria-invalid="!!errors.endDate" />
     </FormRow>
-    <FormRow v-if="!props.liability" label="Initial balance">
-      <Input v-model.number="state.initialBalance" type="number" step="0.01" />
+    <FormRow v-if="!props.liability" label="Initial balance" :error="errors['snapshots.0.value']">
+      <Input
+        v-model.number="state.initialBalance"
+        type="number"
+        step="0.01"
+        :aria-invalid="!!errors['snapshots.0.value']"
+      />
     </FormRow>
-    <FormRow label="Interest type">
+    <FormRow label="Interest type" :error="errors['interest.type']">
       <AppSelect v-model="state.growthType" :options="growthTypeOptions" />
     </FormRow>
-    <FormRow label="Annual rate">
-      <Input v-model.number="state.rate" type="number" step="0.0001" />
+    <FormRow label="Annual rate" required :error="errors['interest.rate']">
+      <Input
+        v-model.number="state.rate"
+        type="number"
+        step="0.0001"
+        :aria-invalid="!!errors['interest.rate']"
+      />
     </FormRow>
-    <FormRow v-if="state.growthType === 'compounding'" label="Compounding frequency">
+    <FormRow
+      v-if="state.growthType === 'compounding'"
+      label="Compounding frequency"
+      :error="errors['interest.compoundingFrequency.kind']"
+    >
       <AppSelect v-model="state.compoundingFrequency" :options="frequencyOptions" />
     </FormRow>
-    <FormRow label="Repayment amount">
-      <Input v-model.number="state.repayment" type="number" step="0.01" />
+    <FormRow label="Repayment amount" required :error="errors.repayment">
+      <Input
+        v-model.number="state.repayment"
+        type="number"
+        step="0.01"
+        :aria-invalid="!!errors.repayment"
+      />
       <WarningChip
         v-for="w in warningsForField('repayment')"
         :key="w.code"
         :warning="w"
       />
     </FormRow>
-    <FormRow label="Repayment frequency">
+    <FormRow label="Repayment frequency" :error="errors['paymentFrequency.kind']">
       <AppSelect v-model="state.paymentFrequency" :options="frequencyOptions" />
     </FormRow>
-    <FormRow label="Source account">
+    <FormRow label="Source account" required :error="errors.sourceAccountId">
       <AppSelect
         v-model="state.sourceAccountId"
         :options="assetOptions"
         placeholder="— select —"
       />
+      <WarningChip
+        v-for="w in warningsForField('sourceAccountId')"
+        :key="w.code"
+        :warning="w"
+      />
     </FormRow>
     <template v-if="state.type === 'credit_card'">
-      <FormRow label="Grace period (days)">
-        <Input v-model.number="state.creditCardGracePeriodDays" type="number" min="0" />
+      <FormRow label="Grace period (days)" :error="errors.creditCardGracePeriodDays">
+        <Input
+          v-model.number="state.creditCardGracePeriodDays"
+          type="number"
+          min="0"
+          :aria-invalid="!!errors.creditCardGracePeriodDays"
+        />
       </FormRow>
       <FormRow label="Revolving">
         <Checkbox v-model="state.creditCardRevolving" class="self-start" />
       </FormRow>
     </template>
-
-    <div v-if="error" class="md:col-span-2 text-sm text-destructive">{{ error }}</div>
 
     <div v-if="draftWarnings.length > 0" class="md:col-span-2 border-t pt-2">
       <WarningsList :warnings="draftWarnings" />

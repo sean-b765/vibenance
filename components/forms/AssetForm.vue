@@ -13,6 +13,7 @@ import type { FrequencyKind } from '@/core/schemas/frequency'
 import type { Liability } from '@/core/schemas/liability'
 import { checkAsset, type Warning } from '@/core/validation/warnings'
 import { fromDateInput, requireDateInput, toDateInput } from '@/utils/dateInput'
+import { zodErrors } from '@/core/validation/warnings'
 
 const props = defineProps<{
   asset?: Asset
@@ -95,6 +96,7 @@ watch(
 )
 
 const error = ref('')
+const errors = ref<Record<string, string>>({})
 
 const buildCandidate = (): Asset => {
   const existing = props.asset
@@ -135,9 +137,11 @@ const warningsForField = (field: string) =>
 
 const save = () => {
   error.value = ''
+  errors.value = {}
   const candidate = buildCandidate()
   const parsed = assetSchema.safeParse(candidate)
   if (!parsed.success) {
+    errors.value = zodErrors(parsed.error.issues)
     const msg = parsed.error.issues[0]?.message ?? 'Invalid asset'
     error.value = msg
     toast.error(`Save failed: ${msg}`)
@@ -148,61 +152,44 @@ const save = () => {
 </script>
 
 <template>
-  <form
-    class="grid grid-cols-1 md:grid-cols-2 gap-4 p-4 bg-muted/40 rounded-md border"
-    @submit.prevent="save"
-  >
-    <FormRow label="Name">
-      <Input v-model="state.name" required />
+  <form class="grid grid-cols-1 md:grid-cols-2 gap-4 p-4 bg-muted/40 rounded-md border" @submit.prevent="save">
+    <FormRow label="Name" required :error="errors.name">
+      <Input v-model="state.name" required :aria-invalid="!!errors.name" />
     </FormRow>
-    <FormRow label="Type">
+    <FormRow label="Type" :error="errors.type">
       <AppSelect v-model="state.type" :options="assetTypeOptions" placeholder="Type" />
     </FormRow>
-    <FormRow label="Start date">
-      <Input v-model="state.startDate" type="date" />
+    <FormRow label="Start date" required :error="errors.startDate">
+      <Input v-model="state.startDate" type="date" :aria-invalid="!!errors.startDate" />
     </FormRow>
-    <FormRow label="End date (optional)">
-      <Input v-model="state.endDate" type="date" />
+    <FormRow label="End date" :error="errors.endDate">
+      <Input v-model="state.endDate" type="date" :aria-invalid="!!errors.endDate" />
     </FormRow>
-    <FormRow v-if="!props.asset" label="Initial balance">
-      <Input v-model.number="state.initialBalance" type="number" step="0.01" />
-      <WarningChip
-        v-for="w in warningsForField('snapshots.0.value')"
-        :key="w.code"
-        :warning="w"
-      />
+    <FormRow v-if="!props.asset" label="Initial balance" :error="errors['snapshots.0.value']">
+      <Input v-model.number="state.initialBalance" type="number" step="0.01"
+        :aria-invalid="!!errors['snapshots.0.value']" />
+      <WarningChip v-for="w in warningsForField('snapshots.0.value')" :key="w.code" :warning="w" />
     </FormRow>
-    <FormRow label="Growth type">
+    <FormRow label="Growth type" :error="errors['growth.type']">
       <AppSelect v-model="state.growthType" :options="growthTypeOptions" />
     </FormRow>
-    <FormRow label="Annual rate (e.g. 0.05 = 5%)">
-      <Input v-model.number="state.rate" type="number" step="0.0001" />
+    <FormRow label="Annual rate (e.g. 0.05 = 5%)" :error="errors['growth.rate']">
+      <Input v-model.number="state.rate" type="number" step="0.0001" :aria-invalid="!!errors['growth.rate']" />
     </FormRow>
-    <FormRow v-if="state.growthType === 'compounding'" label="Compounding frequency">
+    <FormRow v-if="state.growthType === 'compounding'" label="Compounding frequency"
+      :error="errors['growth.compoundingFrequency.kind']">
       <AppSelect v-model="state.compoundingFrequency" :options="frequencyOptions" />
     </FormRow>
-    <FormRow v-if="state.type === 'account_offset'" label="Linked liability">
-      <AppSelect
-        v-model="state.linkedLiabilityId"
-        :options="linkedLiabilityOptions"
-        placeholder="— none —"
-      />
+    <FormRow v-if="state.type === 'account_offset'" label="Linked liability" :error="errors.linkedLiabilityId">
+      <AppSelect v-model="state.linkedLiabilityId" :options="linkedLiabilityOptions" placeholder="— none —" />
     </FormRow>
-
-    <div v-if="error" class="md:col-span-2 text-sm text-destructive">{{ error }}</div>
 
     <div v-if="draftWarnings.length > 0" class="md:col-span-2 border-t pt-2">
       <WarningsList :warnings="draftWarnings" />
     </div>
 
     <div class="md:col-span-2 flex gap-2 justify-end pt-2 border-t">
-      <Button
-        v-if="props.asset"
-        type="button"
-        variant="destructive"
-        size="sm"
-        @click="emit('delete', props.asset.id)"
-      >
+      <Button v-if="props.asset" type="button" variant="destructive" size="sm" @click="emit('delete', props.asset.id)">
         Delete
       </Button>
       <Button type="button" variant="outline" size="sm" @click="emit('cancel')">Cancel</Button>

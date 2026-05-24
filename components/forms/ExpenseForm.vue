@@ -11,6 +11,7 @@ import type { Asset } from '@/core/schemas/asset'
 import { expenseSchema, type Expense } from '@/core/schemas/expense'
 import type { FrequencyKind } from '@/core/schemas/frequency'
 import { fromDateInput, requireDateInput, toDateInput } from '@/utils/dateInput'
+import { zodErrors } from '@/core/validation/warnings'
 
 const props = defineProps<{
   expense?: Expense
@@ -81,9 +82,11 @@ watch(
 )
 
 const error = ref('')
+const errors = ref<Record<string, string>>({})
 
 const save = () => {
   error.value = ''
+  errors.value = {}
   const candidate: Expense = {
     id: state.id,
     name: state.name.trim(),
@@ -101,6 +104,7 @@ const save = () => {
 
   const parsed = expenseSchema.safeParse(candidate)
   if (!parsed.success) {
+    errors.value = zodErrors(parsed.error.issues)
     const msg = parsed.error.issues[0]?.message ?? 'Invalid expense'
     error.value = msg
     toast.error(`Save failed: ${msg}`)
@@ -111,52 +115,38 @@ const save = () => {
 </script>
 
 <template>
-  <form
-    class="grid grid-cols-1 md:grid-cols-2 gap-4 p-4 bg-muted/40 rounded-md border"
-    @submit.prevent="save"
-  >
-    <FormRow label="Name">
-      <Input v-model="state.name" required />
+  <form class="grid grid-cols-1 md:grid-cols-2 gap-4 p-4 bg-muted/40 rounded-md border" @submit.prevent="save">
+    <FormRow label="Name" required :error="errors.name">
+      <Input v-model="state.name" required :aria-invalid="!!errors.name" />
     </FormRow>
-    <FormRow label="Category">
-      <Input v-model="state.type" placeholder="e.g. groceries" />
+    <FormRow label="Category" required :error="errors.type">
+      <Input v-model="state.type" placeholder="e.g. groceries" :aria-invalid="!!errors.type" />
     </FormRow>
-    <FormRow label="Amount">
-      <Input v-model.number="state.amount" type="number" step="0.01" />
+    <FormRow label="Amount" required :error="errors.amount">
+      <Input v-model.number="state.amount" type="number" step="0.01" :aria-invalid="!!errors.amount" />
     </FormRow>
-    <FormRow label="Fixed">
+    <FormRow label="Fixed" required>
       <Checkbox v-model="state.fixed" class="self-start" />
     </FormRow>
-    <FormRow label="Frequency">
+    <FormRow label="Frequency" :error="errors.frequency">
       <AppSelect v-model="state.frequency" :options="frequencyOptions" />
     </FormRow>
-    <FormRow label="Source account">
-      <AppSelect
-        v-model="state.sourceAccountId"
-        :options="assetOptions"
-        placeholder="— select —"
-      />
+    <FormRow label="Source account" required :error="errors.sourceAccountId">
+      <AppSelect v-model="state.sourceAccountId" :options="assetOptions" placeholder="— select —" />
     </FormRow>
-    <FormRow label="Payment date">
-      <Input v-model="state.paymentDate" type="date" />
+    <FormRow label="Payment date" required :error="errors.paymentDate">
+      <Input v-model="state.paymentDate" type="date" :aria-invalid="!!errors.paymentDate" />
     </FormRow>
-    <FormRow label="Start date">
-      <Input v-model="state.startDate" type="date" />
+    <FormRow label="Start date" required :error="errors.startDate">
+      <Input v-model="state.startDate" type="date" :aria-invalid="!!errors.startDate" />
     </FormRow>
-    <FormRow label="End date (optional)">
-      <Input v-model="state.endDate" type="date" />
+    <FormRow label="End date" :error="errors.endDate">
+      <Input v-model="state.endDate" type="date" :aria-invalid="!!errors.endDate" />
     </FormRow>
-
-    <div v-if="error" class="md:col-span-2 text-sm text-destructive">{{ error }}</div>
 
     <div class="md:col-span-2 flex gap-2 justify-end pt-2 border-t">
-      <Button
-        v-if="props.expense"
-        type="button"
-        variant="destructive"
-        size="sm"
-        @click="emit('delete', props.expense.id)"
-      >
+      <Button v-if="props.expense" type="button" variant="destructive" size="sm"
+        @click="emit('delete', props.expense.id)">
         Delete
       </Button>
       <Button type="button" variant="outline" size="sm" @click="emit('cancel')">Cancel</Button>

@@ -11,6 +11,7 @@ import type { Asset } from '@/core/schemas/asset'
 import type { FrequencyKind } from '@/core/schemas/frequency'
 import { incomeSchema, type Income, type IncomeType } from '@/core/schemas/income'
 import { fromDateInput, requireDateInput, toDateInput } from '@/utils/dateInput'
+import { zodErrors } from '@/core/validation/warnings'
 
 const props = defineProps<{
   income?: Income
@@ -83,9 +84,11 @@ watch(
 )
 
 const error = ref('')
+const errors = ref<Record<string, string>>({})
 
 const save = () => {
   error.value = ''
+  errors.value = {}
   const candidate: Income = {
     id: state.id,
     name: state.name.trim(),
@@ -104,6 +107,7 @@ const save = () => {
 
   const parsed = incomeSchema.safeParse(candidate)
   if (!parsed.success) {
+    errors.value = zodErrors(parsed.error.issues)
     const msg = parsed.error.issues[0]?.message ?? 'Invalid income'
     error.value = msg
     toast.error(`Save failed: ${msg}`)
@@ -118,39 +122,42 @@ const save = () => {
     class="grid grid-cols-1 md:grid-cols-2 gap-4 p-4 bg-muted/40 rounded-md border"
     @submit.prevent="save"
   >
-    <FormRow label="Name">
-      <Input v-model="state.name" required />
+    <FormRow label="Name" required :error="errors.name">
+      <Input v-model="state.name" required :aria-invalid="!!errors.name" />
     </FormRow>
-    <FormRow label="Type">
+    <FormRow label="Type" :error="errors.type">
       <AppSelect v-model="state.type" :options="incomeTypeOptions" />
     </FormRow>
-    <FormRow label="Amount per payment">
-      <Input v-model.number="state.amount" type="number" step="0.01" />
+    <FormRow label="Amount per payment" required :error="errors.amount">
+      <Input
+        v-model.number="state.amount"
+        type="number"
+        step="0.01"
+        :aria-invalid="!!errors.amount"
+      />
     </FormRow>
-    <FormRow label="Pretax">
+    <FormRow label="Pretax" required>
       <Checkbox v-model="state.pretax" class="self-start" />
     </FormRow>
-    <FormRow label="Frequency">
+    <FormRow label="Frequency" :error="errors.frequency">
       <AppSelect v-model="state.frequency" :options="frequencyOptions" />
     </FormRow>
-    <FormRow label="Destination account">
+    <FormRow label="Destination account" required :error="errors.destinationAccountId">
       <AppSelect
         v-model="state.destinationAccountId"
         :options="assetOptions"
         placeholder="— select —"
       />
     </FormRow>
-    <FormRow label="Start date">
-      <Input v-model="state.startDate" type="date" />
+    <FormRow label="Start date" required :error="errors.startDate">
+      <Input v-model="state.startDate" type="date" :aria-invalid="!!errors.startDate" />
     </FormRow>
-    <FormRow label="End date (optional)">
-      <Input v-model="state.endDate" type="date" />
+    <FormRow label="End date" :error="errors.endDate">
+      <Input v-model="state.endDate" type="date" :aria-invalid="!!errors.endDate" />
     </FormRow>
-    <FormRow label="Payment date (optional)">
-      <Input v-model="state.paymentDate" type="date" />
+    <FormRow label="Payment date" :error="errors.paymentDate">
+      <Input v-model="state.paymentDate" type="date" :aria-invalid="!!errors.paymentDate" />
     </FormRow>
-
-    <div v-if="error" class="md:col-span-2 text-sm text-destructive">{{ error }}</div>
 
     <div class="md:col-span-2 flex gap-2 justify-end pt-2 border-t">
       <Button
