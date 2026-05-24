@@ -3,7 +3,6 @@ import { computed, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import AppSelect from '@/components/forms/AppSelect.vue'
 import AssetForm from '@/components/forms/AssetForm.vue'
-import EntityWarningChips from '@/components/EntityWarningChips.vue'
 import ExpenseForm from '@/components/forms/ExpenseForm.vue'
 import IncomeForm from '@/components/forms/IncomeForm.vue'
 import LiabilityForm from '@/components/forms/LiabilityForm.vue'
@@ -184,7 +183,6 @@ const submitSnapshot = (kind: 'assets' | 'liabilities', id: string) => {
             @click="toggleExpand(a.id)">
             <div class="flex-1 text-start">
               <span class="flex-1 font-medium text-start">{{ a.name }}</span>
-              <EntityWarningChips class="ml-2" :warnings="warningsFor(a.id)" />
             </div>
             <span class="text-xs text-muted-foreground">{{ a.type }}</span>
             <span class="text-sm font-mono">{{ formatCurrency(lastSnapshotValue(a.snapshots) ?? 0) }}</span>
@@ -226,7 +224,6 @@ const submitSnapshot = (kind: 'assets' | 'liabilities', id: string) => {
             @click="toggleExpand(l.id)">
             <div class="flex-1 text-start">
               <span class="flex-1 font-medium text-start">{{ l.name }}</span>
-              <EntityWarningChips class="ml-2" :warnings="warningsFor(l.id)" />
             </div>
             <span class="text-xs text-muted-foreground">{{ l.type }}</span>
             <span class="text-sm font-mono text-red-600">
@@ -270,7 +267,6 @@ const submitSnapshot = (kind: 'assets' | 'liabilities', id: string) => {
             @click="toggleExpand(i.id)">
             <div class="flex-1 text-start">
               <span class="flex-1 font-medium text-start">{{ i.name }}</span>
-              <EntityWarningChips class="ml-2" :warnings="warningsFor(i.id)" />
             </div>
             <span class="text-xs text-muted-foreground">{{ i.type }} · {{ i.frequency?.kind ?? 'one-off' }}</span>
             <span class="text-sm font-mono">{{ formatCurrency(i.amount) }}</span>
@@ -303,7 +299,6 @@ const submitSnapshot = (kind: 'assets' | 'liabilities', id: string) => {
             @click="toggleExpand(e.id)">
             <div class="flex-1 text-start">
               <span class="flex-1 font-medium text-start">{{ e.name }}</span>
-              <EntityWarningChips class="ml-2" :warnings="warningsFor(e.id)" />
             </div>
             <span class="text-xs text-muted-foreground">{{ e.type }} · {{ e.frequency?.kind ?? 'one-off' }}</span>
             <span class="text-sm font-mono text-red-600">{{ formatCurrency(e.amount) }}</span>

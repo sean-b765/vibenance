@@ -1,58 +1,21 @@
 <script setup lang="ts">
 import { Eye, EyeOff } from 'lucide-vue-next'
-import { toast } from 'vue-sonner'
-import { computed, onMounted, ref, watch } from 'vue'
-import { useRoute, useRouter } from 'vue-router'
+import { computed, ref } from 'vue'
+import { useRoute } from 'vue-router'
 import AppSelect from '@/components/forms/AppSelect.vue'
 import InlineEdit from '@/components/inputs/InlineEdit.vue'
 import NetWorthChart from '@/components/NetWorthChart.vue'
-import WarningsList from '@/components/WarningsList.vue'
 import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import {
-  Alert,
-  AlertDescription,
-  AlertTitle,
-} from '@/components/ui/alert'
 import type { BucketKind } from '@/core/engine/series'
 import { simulate } from '@/core/engine/simulation'
 import type { Scenario } from '@/core/schemas/scenario'
-import type { Warning } from '@/core/validation/warnings'
 import { useScenariosStore } from '@/stores/scenarios'
 import { useWarningsStore } from '@/stores/warnings'
 import { formatCurrency, formatDate } from '@/utils/format'
-import { warningRoute } from '@/utils/warningRoute'
 
 const route = useRoute()
-const router = useRouter()
 const scenarios = useScenariosStore()
 const warningsStore = useWarningsStore()
-
-const scenarioWarnings = computed<Warning[]>(() => {
-  const id = route.params.id as string | undefined
-  if (!id) return []
-  return warningsStore.warningsByScenario[id] ?? []
-})
-const scenarioLevelWarnings = computed<Warning[]>(() =>
-  scenarioWarnings.value.filter((w) => w.entityType === 'scenario'),
-)
-const entityLevelWarnings = computed<Warning[]>(() =>
-  scenarioWarnings.value.filter((w) => w.entityType !== 'scenario'),
-)
-const showWarnings = ref(true)
-
-const fireSummaryToast = () => {
-  const count = scenarioWarnings.value.length
-  if (count === 0) return
-  toast.warning(`${count} ${count === 1 ? 'warning' : 'warnings'} in scenario`)
-}
-
-onMounted(fireSummaryToast)
-watch(() => route.params.id, fireSummaryToast)
-
-const goToWarning = (w: Warning) => {
-  router.push(warningRoute(route.params.id as string, w))
-}
 
 const bucketKind = ref<BucketKind>('month')
 const horizonYears = ref<number>(5)
@@ -400,14 +363,6 @@ const expenseTotal = computed(() =>
         </table>
       </div>
     </section>
-
-    <Alert v-if="scenarioLevelWarnings.length > 0 || entityLevelWarnings.length > 0" variant="destructive">
-      <AlertTitle>Warnings ({{ scenarioLevelWarnings.length + entityLevelWarnings.length }})</AlertTitle>
-      <AlertDescription>
-        <WarningsList :warnings="scenarioLevelWarnings" @select="goToWarning" />
-        <WarningsList :warnings="entityLevelWarnings" @select="goToWarning" />
-      </AlertDescription>
-    </Alert>
 
     <section v-if="scenario.entities.transfers.length > 0" class="p-4 bg-card rounded-md border">
       <div class="text-xs uppercase text-muted-foreground mb-2">

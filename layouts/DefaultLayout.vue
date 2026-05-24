@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { RouterView } from 'vue-router'
 import AppSidebar from '@/components/AppSidebar.vue'
+import GlobalWarningsDrawer from '@/components/GlobalWarningsDrawer.vue'
 import { Separator } from '@/components/ui/separator'
 import {
   SidebarInset,
@@ -22,5 +23,6 @@ import {
         <RouterView />
       </main>
     </SidebarInset>
+    <GlobalWarningsDrawer />
   </SidebarProvider>
 </template>

@@ -24,7 +24,7 @@ export const renderWarning = (
   warning: Warning,
 ): string => {
   const body = interpolate(messages[warning.code], warning.messageParams)
-  if (warning.entityType === 'scenario') return body
+  if (warning.entityType === 'scenario') return body.substring(0, 1).toUpperCase() + body.substring(1)
   return `${warning.entityName}: ${body}.`
 }
 
