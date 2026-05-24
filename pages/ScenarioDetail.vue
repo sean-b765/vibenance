@@ -1,19 +1,50 @@
 <script setup lang="ts">
 import { Eye, EyeOff } from 'lucide-vue-next'
-import { computed, ref } from 'vue'
-import { useRoute } from 'vue-router'
+import { toast } from 'vue-sonner'
+import { computed, onMounted, ref, watch } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
 import AppSelect from '@/components/forms/AppSelect.vue'
 import InlineEdit from '@/components/inputs/InlineEdit.vue'
 import NetWorthChart from '@/components/NetWorthChart.vue'
+import WarningsList from '@/components/WarningsList.vue'
 import { Button } from '@/components/ui/button'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import type { BucketKind } from '@/core/engine/series'
 import { simulate } from '@/core/engine/simulation'
 import type { Scenario } from '@/core/schemas/scenario'
+import type { Warning } from '@/core/validation/warnings'
 import { useScenariosStore } from '@/stores/scenarios'
+import { useWarningsStore } from '@/stores/warnings'
 import { formatCurrency, formatDate } from '@/utils/format'
 
 const route = useRoute()
+const router = useRouter()
 const scenarios = useScenariosStore()
+const warningsStore = useWarningsStore()
+
+const scenarioWarnings = computed<Warning[]>(() => {
+  const id = route.params.id as string | undefined
+  if (!id) return []
+  return warningsStore.warningsByScenario[id] ?? []
+})
+const showWarnings = ref(true)
+
+const fireSummaryToast = () => {
+  const count = scenarioWarnings.value.length
+  if (count === 0) return
+  toast.warning(`${count} ${count === 1 ? 'warning' : 'warnings'} in ${scenarios.scenarios.find((s) => s.id === route.params.id)?.name ?? 'scenario'}`)
+}
+
+onMounted(fireSummaryToast)
+watch(() => route.params.id, fireSummaryToast)
+
+const goToWarning = (w: Warning) => {
+  if (w.entityType === 'scenario') return
+  router.push({
+    name: 'entities',
+    query: { scenario: route.params.id as string, expand: w.entityId },
+  })
+}
 
 const bucketKind = ref<BucketKind>('month')
 const horizonYears = ref<number>(5)
@@ -379,6 +410,18 @@ const expenseTotal = computed(() =>
         </table>
       </div>
     </section>
+
+    <Card v-if="scenarioWarnings.length > 0">
+      <CardHeader class="flex flex-row items-center justify-between space-y-0">
+        <CardTitle>Warnings ({{ scenarioWarnings.length }})</CardTitle>
+        <Button variant="ghost" size="sm" @click="showWarnings = !showWarnings">
+          {{ showWarnings ? 'Hide' : 'Show' }}
+        </Button>
+      </CardHeader>
+      <CardContent v-if="showWarnings">
+        <WarningsList :warnings="scenarioWarnings" @select="goToWarning" />
+      </CardContent>
+    </Card>
 
     <section v-if="scenario.entities.transfers.length > 0" class="p-4 bg-card rounded-md border">
       <div class="text-xs uppercase text-muted-foreground mb-2">

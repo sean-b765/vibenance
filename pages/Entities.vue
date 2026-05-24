@@ -1,5 +1,6 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue'
+import { computed, onMounted, ref, watch } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
 import AppSelect from '@/components/forms/AppSelect.vue'
 import AssetForm from '@/components/forms/AssetForm.vue'
 import ExpenseForm from '@/components/forms/ExpenseForm.vue'
@@ -16,8 +17,27 @@ import { useScenariosStore } from '@/stores/scenarios'
 import { formatCurrency } from '@/utils/format'
 
 const scenarios = useScenariosStore()
+const route = useRoute()
+const router = useRouter()
 
 const expandedId = ref<string | null>(null)
+
+const applyQuery = () => {
+  const q = route.query
+  const scenarioQ = typeof q.scenario === 'string' ? q.scenario : null
+  const expandQ = typeof q.expand === 'string' ? q.expand : null
+  if (scenarioQ && scenarios.scenarios.some((s) => s.id === scenarioQ)) {
+    scenarios.setActive(scenarioQ)
+  }
+  if (expandQ) {
+    expandedId.value = expandQ
+  }
+  if (scenarioQ || expandQ) {
+    router.replace({ name: 'entities', query: {} })
+  }
+}
+onMounted(applyQuery)
+watch(() => route.query, applyQuery)
 const newCategory = ref<null | 'asset' | 'liability' | 'income' | 'expense'>(null)
 const filter = ref('')
 

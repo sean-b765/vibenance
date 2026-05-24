@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { useColorMode } from '@vueuse/core'
 import { watch } from 'vue'
+import { Toaster } from '@/components/ui/sonner'
 import { useSettingsStore } from '@/stores/settings'
 import { setActiveCurrency } from '@/utils/format'
 
@@ -16,4 +17,5 @@ watch(
 
 <template>
   <RouterView />
+  <Toaster />
 </template>

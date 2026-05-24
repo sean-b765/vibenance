@@ -1,20 +1,37 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
+import { useRouter } from 'vue-router'
 import NetWorthChart from '@/components/NetWorthChart.vue'
+import WarningsList from '@/components/WarningsList.vue'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { compute as computeNetWorth } from '@/core/engine/netWorth'
 import { simulate } from '@/core/engine/simulation'
 import { parseBundle } from '@/core/io/json'
+import type { Warning } from '@/core/validation/warnings'
 import { useScenariosStore } from '@/stores/scenarios'
 import { useSettingsStore } from '@/stores/settings'
 import { useTagsStore } from '@/stores/tags'
+import { useWarningsStore } from '@/stores/warnings'
 import { formatCurrency } from '@/utils/format'
 
 const scenarios = useScenariosStore()
 const tags = useTagsStore()
 const settings = useSettingsStore()
+const warnings = useWarningsStore()
+const router = useRouter()
 const today = new Date().toISOString()
+
+const goToWarning = (scenarioId: string, w: Warning) => {
+  if (w.entityType === 'scenario') {
+    router.push({ name: 'scenario-detail', params: { id: scenarioId } })
+    return
+  }
+  router.push({
+    name: 'entities',
+    query: { scenario: scenarioId, expand: w.entityId },
+  })
+}
 
 const fileInput = ref<HTMLInputElement | null>(null)
 const importError = ref<string | null>(null)
@@ -137,7 +154,28 @@ const liabilityTotal = computed(() =>
         <CardTitle>Warnings</CardTitle>
       </CardHeader>
       <CardContent>
-        <p class="text-sm text-muted-foreground">No warnings.</p>
+        <p
+          v-if="warnings.favouriteWarnings.every((g) => g.warnings.length === 0)"
+          class="text-sm text-muted-foreground"
+        >
+          No warnings.
+        </p>
+        <div v-else class="space-y-4">
+          <div v-for="group in warnings.favouriteWarnings" :key="group.scenario.id">
+            <div
+              v-if="group.warnings.length > 0"
+              class="text-xs uppercase text-muted-foreground font-medium mb-1"
+            >
+              {{ group.scenario.name }} — {{ group.warnings.length }}
+              {{ group.warnings.length === 1 ? 'warning' : 'warnings' }}
+            </div>
+            <WarningsList
+              v-if="group.warnings.length > 0"
+              :warnings="group.warnings"
+              @select="(w) => goToWarning(group.scenario.id, w)"
+            />
+          </div>
+        </div>
       </CardContent>
     </Card>
   </div>

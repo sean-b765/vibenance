@@ -1,13 +1,17 @@
 <script setup lang="ts">
 import { computed, reactive, ref, watch } from 'vue'
+import { toast } from 'vue-sonner'
 import { uuidv7 } from 'uuidv7'
 import AppSelect from '@/components/forms/AppSelect.vue'
 import FormRow from '@/components/forms/FormRow.vue'
+import WarningChip from '@/components/WarningChip.vue'
+import WarningsList from '@/components/WarningsList.vue'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { assetSchema, type Asset, type AssetType } from '@/core/schemas/asset'
 import type { FrequencyKind } from '@/core/schemas/frequency'
 import type { Liability } from '@/core/schemas/liability'
+import { checkAsset, type Warning } from '@/core/validation/warnings'
 import { fromDateInput, requireDateInput, toDateInput } from '@/utils/dateInput'
 
 const props = defineProps<{
@@ -92,8 +96,7 @@ watch(
 
 const error = ref('')
 
-const save = () => {
-  error.value = ''
+const buildCandidate = (): Asset => {
   const existing = props.asset
   const snapshots = existing?.snapshots ?? []
   const hasSnapshot = snapshots.length > 0
@@ -101,7 +104,7 @@ const save = () => {
     id: state.id,
     name: state.name.trim(),
     type: state.type,
-    startDate: requireDateInput(state.startDate),
+    startDate: requireDateInput(state.startDate || new Date().toISOString()),
     snapshots: hasSnapshot
       ? snapshots
       : [{ date: new Date().toISOString(), value: Number(state.initialBalance), actual: true }],
@@ -117,10 +120,27 @@ const save = () => {
   const end = fromDateInput(state.endDate)
   if (end) candidate.endDate = end
   if (state.linkedLiabilityId) candidate.linkedLiabilityId = state.linkedLiabilityId
+  return candidate
+}
 
+const draftWarnings = computed<Warning[]>(() => {
+  try {
+    return checkAsset(buildCandidate())
+  } catch {
+    return []
+  }
+})
+const warningsForField = (field: string) =>
+  draftWarnings.value.filter((w) => w.field === field)
+
+const save = () => {
+  error.value = ''
+  const candidate = buildCandidate()
   const parsed = assetSchema.safeParse(candidate)
   if (!parsed.success) {
-    error.value = parsed.error.issues[0]?.message ?? 'Invalid asset'
+    const msg = parsed.error.issues[0]?.message ?? 'Invalid asset'
+    error.value = msg
+    toast.error(`Save failed: ${msg}`)
     return
   }
   emit('save', parsed.data)
@@ -146,6 +166,11 @@ const save = () => {
     </FormRow>
     <FormRow v-if="!props.asset" label="Initial balance">
       <Input v-model.number="state.initialBalance" type="number" step="0.01" />
+      <WarningChip
+        v-for="w in warningsForField('snapshots.0.value')"
+        :key="w.code"
+        :warning="w"
+      />
     </FormRow>
     <FormRow label="Growth type">
       <AppSelect v-model="state.growthType" :options="growthTypeOptions" />
@@ -165,6 +190,10 @@ const save = () => {
     </FormRow>
 
     <div v-if="error" class="md:col-span-2 text-sm text-destructive">{{ error }}</div>
+
+    <div v-if="draftWarnings.length > 0" class="md:col-span-2 border-t pt-2">
+      <WarningsList :warnings="draftWarnings" />
+    </div>
 
     <div class="md:col-span-2 flex gap-2 justify-end pt-2 border-t">
       <Button

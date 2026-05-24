@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, reactive, ref, watch } from 'vue'
+import { toast } from 'vue-sonner'
 import { uuidv7 } from 'uuidv7'
 import AppSelect from '@/components/forms/AppSelect.vue'
 import FormRow from '@/components/forms/FormRow.vue'
@@ -103,7 +104,9 @@ const save = () => {
 
   const parsed = incomeSchema.safeParse(candidate)
   if (!parsed.success) {
-    error.value = parsed.error.issues[0]?.message ?? 'Invalid income'
+    const msg = parsed.error.issues[0]?.message ?? 'Invalid income'
+    error.value = msg
+    toast.error(`Save failed: ${msg}`)
     return
   }
   emit('save', parsed.data)

@@ -1,14 +1,18 @@
 <script setup lang="ts">
 import { computed, reactive, ref, watch } from 'vue'
+import { toast } from 'vue-sonner'
 import { uuidv7 } from 'uuidv7'
 import AppSelect from '@/components/forms/AppSelect.vue'
 import FormRow from '@/components/forms/FormRow.vue'
+import WarningChip from '@/components/WarningChip.vue'
+import WarningsList from '@/components/WarningsList.vue'
 import { Button } from '@/components/ui/button'
 import { Checkbox } from '@/components/ui/checkbox'
 import { Input } from '@/components/ui/input'
 import type { Asset } from '@/core/schemas/asset'
 import type { FrequencyKind } from '@/core/schemas/frequency'
 import { liabilitySchema, type Liability, type LiabilityType } from '@/core/schemas/liability'
+import { checkLiability, type Warning } from '@/core/validation/warnings'
 import { fromDateInput, requireDateInput, toDateInput } from '@/utils/dateInput'
 
 const props = defineProps<{
@@ -92,15 +96,14 @@ watch(
 
 const error = ref('')
 
-const save = () => {
-  error.value = ''
+const buildCandidate = (): Liability => {
   const existing = props.liability
   const snapshots = existing?.snapshots ?? []
   const candidate: Liability = {
     id: state.id,
     name: state.name.trim(),
     type: state.type,
-    startDate: requireDateInput(state.startDate),
+    startDate: requireDateInput(state.startDate || new Date().toISOString()),
     snapshots:
       snapshots.length > 0
         ? snapshots
@@ -114,7 +117,7 @@ const save = () => {
     },
     repayment: Number(state.repayment),
     paymentFrequency: { kind: state.paymentFrequency },
-    sourceAccountId: state.sourceAccountId,
+    sourceAccountId: state.sourceAccountId || '00000000-0000-0000-0000-000000000000',
     tagIds: existing?.tagIds ?? [],
   }
   const end = fromDateInput(state.endDate)
@@ -123,10 +126,32 @@ const save = () => {
     candidate.creditCardGracePeriodDays = Number(state.creditCardGracePeriodDays)
     candidate.creditCardRevolving = state.creditCardRevolving
   }
+  return candidate
+}
 
+const draftWarnings = computed<Warning[]>(() => {
+  try {
+    return checkLiability(buildCandidate(), {
+      assets: props.assets,
+      liabilities: [],
+      incomes: [],
+      expenses: [],
+    })
+  } catch {
+    return []
+  }
+})
+const warningsForField = (field: string) =>
+  draftWarnings.value.filter((w) => w.field === field)
+
+const save = () => {
+  error.value = ''
+  const candidate = buildCandidate()
   const parsed = liabilitySchema.safeParse(candidate)
   if (!parsed.success) {
-    error.value = parsed.error.issues[0]?.message ?? 'Invalid liability'
+    const msg = parsed.error.issues[0]?.message ?? 'Invalid liability'
+    error.value = msg
+    toast.error(`Save failed: ${msg}`)
     return
   }
   emit('save', parsed.data)
@@ -164,6 +189,11 @@ const save = () => {
     </FormRow>
     <FormRow label="Repayment amount">
       <Input v-model.number="state.repayment" type="number" step="0.01" />
+      <WarningChip
+        v-for="w in warningsForField('repayment')"
+        :key="w.code"
+        :warning="w"
+      />
     </FormRow>
     <FormRow label="Repayment frequency">
       <AppSelect v-model="state.paymentFrequency" :options="frequencyOptions" />
@@ -185,6 +215,10 @@ const save = () => {
     </template>
 
     <div v-if="error" class="md:col-span-2 text-sm text-destructive">{{ error }}</div>
+
+    <div v-if="draftWarnings.length > 0" class="md:col-span-2 border-t pt-2">
+      <WarningsList :warnings="draftWarnings" />
+    </div>
 
     <div class="md:col-span-2 flex gap-2 justify-end pt-2 border-t">
       <Button
