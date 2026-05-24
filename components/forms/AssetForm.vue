@@ -5,7 +5,6 @@ import { uuidv7 } from 'uuidv7'
 import AppSelect from '@/components/forms/AppSelect.vue'
 import FormRow from '@/components/forms/FormRow.vue'
 import WarningChip from '@/components/WarningChip.vue'
-import WarningsList from '@/components/WarningsList.vue'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { assetSchema, type Asset, type AssetType } from '@/core/schemas/asset'
@@ -183,10 +182,6 @@ const save = () => {
     <FormRow v-if="state.type === 'account_offset'" label="Linked liability" :error="errors.linkedLiabilityId">
       <AppSelect v-model="state.linkedLiabilityId" :options="linkedLiabilityOptions" placeholder="— none —" />
     </FormRow>
-
-    <div v-if="draftWarnings.length > 0" class="md:col-span-2 border-t pt-2">
-      <WarningsList :warnings="draftWarnings" />
-    </div>
 
     <div class="md:col-span-2 flex gap-2 justify-end pt-2 border-t">
       <Button v-if="props.asset" type="button" variant="destructive" size="sm" @click="emit('delete', props.asset.id)">
