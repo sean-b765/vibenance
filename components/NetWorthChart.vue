@@ -13,6 +13,8 @@ type LineSpec = {
   name: string
   colour: string
   points: SeriesPoint[]
+  area?: boolean
+  width?: number
 }
 
 const props = defineProps<{
@@ -45,6 +47,8 @@ const bucketed = computed(() =>
   props.lines.map((l) => ({
     name: l.name,
     colour: l.colour,
+    area: l.area ?? false,
+    width: l.width ?? 2,
     points: bucket(l.points, props.bucketKind),
   })),
 )
@@ -105,8 +109,10 @@ const option = computed(() => ({
     showSymbol: false,
     smooth: false,
     sampling: 'lttb',
-    lineStyle: { color: l.colour, width: 2 },
+    z: l.area ? 1 : 2,
+    lineStyle: { color: l.colour, width: l.width },
     itemStyle: { color: l.colour },
+    ...(l.area ? { areaStyle: { color: l.colour, opacity: 0.25 } } : {}),
     data: l.points.map((p) => [p.date, p.value]),
   })),
 }))

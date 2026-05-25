@@ -63,15 +63,27 @@ const startValue = computed(() => series.value[0]?.value ?? 0)
 const endValue = computed(() => series.value[series.value.length - 1]?.value ?? 0)
 const delta = computed(() => endValue.value - startValue.value)
 
+const ENTITY_PALETTE = [
+  '#3b82f6', '#f97316', '#10b981', '#a855f7', '#ec4899',
+  '#14b8a6', '#eab308', '#6366f1', '#ef4444', '#84cc16',
+]
+
 const lines = computed(() => {
   if (!scenario.value) return []
-  return [
-    {
-      name: scenario.value.name,
-      colour: scenario.value.colour,
-      points: series.value,
-    },
-  ]
+  const main = {
+    name: "Net Worth",
+    colour: scenario.value.colour,
+    points: series.value,
+    area: true,
+    width: 3,
+  }
+  const entityLines = entitySeries.value.map((e, i) => ({
+    name: e.name,
+    colour: ENTITY_PALETTE[i % ENTITY_PALETTE.length]!,
+    points: e.points,
+    width: 1.5,
+  }))
+  return [main, ...entityLines]
 })
 
 const nearestPointValue = (
