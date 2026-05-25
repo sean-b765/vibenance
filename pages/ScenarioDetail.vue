@@ -10,10 +10,12 @@ import type { BucketKind } from '@/core/engine/series'
 import { simulate } from '@/core/engine/simulation'
 import type { Scenario } from '@/core/schemas/scenario'
 import { useScenariosStore } from '@/stores/scenarios'
+import { useWarningsStore } from '@/stores/warnings'
 import { formatCurrency, formatDate } from '@/utils/format'
 
 const route = useRoute()
 const scenarios = useScenariosStore()
+const warningsStore = useWarningsStore()
 
 const bucketKind = ref<BucketKind>('month')
 const horizonYears = ref<number>(5)
@@ -150,8 +152,8 @@ const annualised = (amount: number, kind: string | null | undefined) =>
 const incomeTotal = computed(() =>
   scenario.value
     ? scenario.value.entities.incomes
-        .filter((i) => !isDisabled(i.id))
-        .reduce((s, i) => s + annualised(i.amount, i.frequency?.kind ?? null), 0)
+      .filter((i) => !isDisabled(i.id))
+      .reduce((s, i) => s + annualised(i.amount, i.frequency?.kind ?? null), 0)
     : 0,
 )
 const onRename = (next: string) => {
@@ -167,8 +169,8 @@ const onColourChange = (e: Event) => {
 const expenseTotal = computed(() =>
   scenario.value
     ? scenario.value.entities.expenses
-        .filter((e) => !isDisabled(e.id))
-        .reduce((s, e) => s + annualised(e.amount, e.frequency?.kind ?? null), 0)
+      .filter((e) => !isDisabled(e.id))
+      .reduce((s, e) => s + annualised(e.amount, e.frequency?.kind ?? null), 0)
     : 0,
 )
 </script>
@@ -180,20 +182,11 @@ const expenseTotal = computed(() =>
     <header class="flex items-center gap-3">
       <label class="relative cursor-pointer" title="Change colour">
         <span class="block w-5 h-5 rounded-full border border-border" :style="{ background: scenario.colour }" />
-        <input
-          type="color"
-          class="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
-          :value="scenario.colour"
-          @input="onColourChange"
-        />
+        <input type="color" class="absolute inset-0 w-full h-full opacity-0 cursor-pointer" :value="scenario.colour"
+          @input="onColourChange" />
       </label>
-      <InlineEdit
-        :model-value="scenario.name"
-        aria-label="Rename"
-        label-class="text-2xl font-semibold"
-        input-class="text-2xl md:text-2xl font-semibold h-10"
-        @update:model-value="onRename"
-      />
+      <InlineEdit :model-value="scenario.name" aria-label="Rename" label-class="text-2xl font-semibold"
+        input-class="text-2xl md:text-2xl font-semibold h-10" @update:model-value="onRename" />
     </header>
 
     <section class="p-6 bg-card rounded border border-border">
@@ -203,28 +196,19 @@ const expenseTotal = computed(() =>
           <div class="flex items-center gap-2">
             <span>Horizon</span>
             <div class="min-w-[100px]">
-              <AppSelect
-                :model-value="horizonYears"
-                :options="[
-                  { value: 1, label: '1 yr' },
-                  { value: 3, label: '3 yr' },
-                  { value: 5, label: '5 yr' },
-                  { value: 10, label: '10 yr' },
-                  { value: 20, label: '20 yr' },
-                  { value: 30, label: '30 yr' },
-                ]"
-                @update:model-value="(v) => horizonYears = Number(v) || 5"
-              />
+              <AppSelect :model-value="horizonYears" :options="[
+                { value: 1, label: '1 yr' },
+                { value: 3, label: '3 yr' },
+                { value: 5, label: '5 yr' },
+                { value: 10, label: '10 yr' },
+                { value: 20, label: '20 yr' },
+                { value: 30, label: '30 yr' },
+              ]" @update:model-value="(v) => horizonYears = Number(v) || 5" />
             </div>
           </div>
           <div class="flex gap-1">
-            <Button
-              v-for="b in (['day', 'week', 'month'] as const)"
-              :key="b"
-              size="sm"
-              :variant="bucketKind === b ? 'default' : 'outline'"
-              @click="bucketKind = b"
-            >
+            <Button v-for="b in (['day', 'week', 'month'] as const)" :key="b" size="sm"
+              :variant="bucketKind === b ? 'default' : 'outline'" @click="bucketKind = b">
               {{ b }}
             </Button>
           </div>

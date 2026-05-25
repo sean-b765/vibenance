@@ -1,14 +1,26 @@
 <script setup lang="ts">
-import { computed, reactive, ref, watch } from 'vue'
+import { computed, watch } from 'vue'
+import { useForm } from 'vee-validate'
+import { toTypedSchema } from '@vee-validate/zod'
+import { toast } from 'vue-sonner'
 import { uuidv7 } from 'uuidv7'
+import { z } from 'zod'
 import AppSelect from '@/components/forms/AppSelect.vue'
-import FormRow from '@/components/forms/FormRow.vue'
+import WarningChip from '@/components/WarningChip.vue'
 import { Button } from '@/components/ui/button'
 import { Checkbox } from '@/components/ui/checkbox'
+import {
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from '@/components/ui/form'
 import { Input } from '@/components/ui/input'
 import type { Asset } from '@/core/schemas/asset'
 import type { FrequencyKind } from '@/core/schemas/frequency'
 import { liabilitySchema, type Liability, type LiabilityType } from '@/core/schemas/liability'
+import { checkLiability, type Warning } from '@/core/validation/warnings'
 import { fromDateInput, requireDateInput, toDateInput } from '@/utils/dateInput'
 
 const props = defineProps<{
@@ -33,41 +45,43 @@ const growthTypeOptions: { value: 'simple' | 'compounding'; label: string }[] = 
 const frequencyOptions = frequencies.map((f) => ({ value: f, label: f }))
 const assetOptions = computed(() => props.assets.map((a) => ({ value: a.id, label: a.name })))
 
-type FormState = {
-  id: string
-  name: string
-  type: LiabilityType
-  startDate: string
-  endDate: string
-  growthType: 'simple' | 'compounding'
-  rate: number
-  compoundingFrequency: FrequencyKind
-  repayment: number
-  paymentFrequency: FrequencyKind
-  sourceAccountId: string
-  creditCardGracePeriodDays: number
-  creditCardRevolving: boolean
-  initialBalance: number
-}
+const formSchema = toTypedSchema(
+  z.object({
+    id: z.string().uuid(),
+    name: z.string().min(1, 'Name is required'),
+    type: z.enum(['mortgage', 'personal_loan', 'credit_card', 'car_loan']),
+    startDate: z.string().min(1, 'Start date is required'),
+    endDate: z.string().optional().default(''),
+    growthType: z.enum(['simple', 'compounding']),
+    rate: z.coerce.number().min(0, 'Rate must be ≥ 0'),
+    compoundingFrequency: z.enum(['daily', 'weekly', 'fortnightly', 'monthly', 'annually']),
+    repayment: z.coerce.number().min(0, 'Repayment must be ≥ 0'),
+    paymentFrequency: z.enum(['daily', 'weekly', 'fortnightly', 'monthly', 'annually']),
+    sourceAccountId: z.string().uuid('Source account is required'),
+    creditCardGracePeriodDays: z.coerce.number().min(0),
+    creditCardRevolving: z.boolean(),
+    initialBalance: z.coerce.number(),
+  }),
+)
 
-const blank = (): FormState => ({
+const blank = () => ({
   id: uuidv7(),
   name: '',
-  type: 'mortgage',
+  type: 'mortgage' as LiabilityType,
   startDate: toDateInput(new Date().toISOString()),
   endDate: '',
-  growthType: 'compounding',
+  growthType: 'compounding' as 'simple' | 'compounding',
   rate: 0.06,
-  compoundingFrequency: 'monthly',
+  compoundingFrequency: 'monthly' as FrequencyKind,
   repayment: 0,
-  paymentFrequency: 'monthly',
+  paymentFrequency: 'monthly' as FrequencyKind,
   sourceAccountId: '',
   creditCardGracePeriodDays: 55,
   creditCardRevolving: false,
   initialBalance: 0,
 })
 
-const fromLiability = (l: Liability): FormState => ({
+const fromLiability = (l: Liability) => ({
   id: l.id,
   name: l.name,
   type: l.type,
@@ -84,107 +98,195 @@ const fromLiability = (l: Liability): FormState => ({
   initialBalance: l.snapshots[l.snapshots.length - 1]?.value ?? 0,
 })
 
-const state = reactive<FormState>(props.liability ? fromLiability(props.liability) : blank())
+const form = useForm({
+  validationSchema: formSchema,
+  initialValues: props.liability ? fromLiability(props.liability) : blank(),
+})
+
 watch(
   () => props.liability,
-  (l) => Object.assign(state, l ? fromLiability(l) : blank()),
+  (l) => form.resetForm({ values: l ? fromLiability(l) : blank() }),
 )
 
-const error = ref('')
-
-const save = () => {
-  error.value = ''
+const buildCandidate = (v: ReturnType<typeof blank>): Liability => {
   const existing = props.liability
   const snapshots = existing?.snapshots ?? []
   const candidate: Liability = {
-    id: state.id,
-    name: state.name.trim(),
-    type: state.type,
-    startDate: requireDateInput(state.startDate),
+    id: v.id,
+    name: v.name.trim(),
+    type: v.type,
+    startDate: requireDateInput(v.startDate || new Date().toISOString()),
     snapshots:
       snapshots.length > 0
         ? snapshots
-        : [{ date: new Date().toISOString(), value: Number(state.initialBalance), actual: true }],
+        : [{ date: new Date().toISOString(), value: Number(v.initialBalance), actual: true }],
     interest: {
-      type: state.growthType,
-      rate: Number(state.rate),
-      ...(state.growthType === 'compounding'
-        ? { compoundingFrequency: { kind: state.compoundingFrequency } }
+      type: v.growthType,
+      rate: Number(v.rate),
+      ...(v.growthType === 'compounding'
+        ? { compoundingFrequency: { kind: v.compoundingFrequency } }
         : {}),
     },
-    repayment: Number(state.repayment),
-    paymentFrequency: { kind: state.paymentFrequency },
-    sourceAccountId: state.sourceAccountId,
+    repayment: Number(v.repayment),
+    paymentFrequency: { kind: v.paymentFrequency },
+    sourceAccountId: v.sourceAccountId,
     tagIds: existing?.tagIds ?? [],
   }
-  const end = fromDateInput(state.endDate)
+  const end = fromDateInput(v.endDate)
   if (end) candidate.endDate = end
-  if (state.type === 'credit_card') {
-    candidate.creditCardGracePeriodDays = Number(state.creditCardGracePeriodDays)
-    candidate.creditCardRevolving = state.creditCardRevolving
+  if (v.type === 'credit_card') {
+    candidate.creditCardGracePeriodDays = Number(v.creditCardGracePeriodDays)
+    candidate.creditCardRevolving = v.creditCardRevolving
   }
-
-  const parsed = liabilitySchema.safeParse(candidate)
-  if (!parsed.success) {
-    error.value = parsed.error.issues[0]?.message ?? 'Invalid liability'
-    return
-  }
-  emit('save', parsed.data)
+  return candidate
 }
+
+const draftWarnings = computed<Warning[]>(() => {
+  try {
+    return checkLiability(buildCandidate(form.values as ReturnType<typeof blank>), {
+      assets: props.assets,
+      liabilities: [],
+      incomes: [],
+      expenses: [],
+    })
+  } catch {
+    return []
+  }
+})
+const warningsForField = (field: string) =>
+  draftWarnings.value.filter((w) => w.field === field)
+
+const onSubmit = form.handleSubmit(
+  (values) => {
+    const candidate = buildCandidate(values)
+    const parsed = liabilitySchema.safeParse(candidate)
+    if (!parsed.success) {
+      const msg = parsed.error.issues[0]?.message ?? 'Invalid liability'
+      toast.error(`Save failed: ${msg}`)
+      return
+    }
+    emit('save', parsed.data)
+  },
+  ({ errors }) => {
+    const msg = Object.values(errors)[0] ?? 'Invalid liability'
+    toast.error(`Save failed: ${msg}`)
+  },
+)
 </script>
 
 <template>
-  <form
-    class="grid grid-cols-1 md:grid-cols-2 gap-4 p-4 bg-muted/40 rounded-md border"
-    @submit.prevent="save"
-  >
-    <FormRow label="Name">
-      <Input v-model="state.name" required />
-    </FormRow>
-    <FormRow label="Type">
-      <AppSelect v-model="state.type" :options="liabilityTypeOptions" />
-    </FormRow>
-    <FormRow label="Start date">
-      <Input v-model="state.startDate" type="date" />
-    </FormRow>
-    <FormRow label="End date (optional)">
-      <Input v-model="state.endDate" type="date" />
-    </FormRow>
-    <FormRow v-if="!props.liability" label="Initial balance">
-      <Input v-model.number="state.initialBalance" type="number" step="0.01" />
-    </FormRow>
-    <FormRow label="Interest type">
-      <AppSelect v-model="state.growthType" :options="growthTypeOptions" />
-    </FormRow>
-    <FormRow label="Annual rate">
-      <Input v-model.number="state.rate" type="number" step="0.0001" />
-    </FormRow>
-    <FormRow v-if="state.growthType === 'compounding'" label="Compounding frequency">
-      <AppSelect v-model="state.compoundingFrequency" :options="frequencyOptions" />
-    </FormRow>
-    <FormRow label="Repayment amount">
-      <Input v-model.number="state.repayment" type="number" step="0.01" />
-    </FormRow>
-    <FormRow label="Repayment frequency">
-      <AppSelect v-model="state.paymentFrequency" :options="frequencyOptions" />
-    </FormRow>
-    <FormRow label="Source account">
-      <AppSelect
-        v-model="state.sourceAccountId"
-        :options="assetOptions"
-        placeholder="— select —"
-      />
-    </FormRow>
-    <template v-if="state.type === 'credit_card'">
-      <FormRow label="Grace period (days)">
-        <Input v-model.number="state.creditCardGracePeriodDays" type="number" min="0" />
-      </FormRow>
-      <FormRow label="Revolving">
-        <Checkbox v-model="state.creditCardRevolving" class="self-start" />
-      </FormRow>
-    </template>
+  <form class="grid grid-cols-1 md:grid-cols-2 gap-4 p-4 bg-muted/40 rounded-md border" @submit="onSubmit">
+    <FormField v-slot="{ componentField }" name="name">
+      <FormItem>
+        <FormLabel>Name <span class="text-destructive">*</span></FormLabel>
+        <FormControl><Input v-bind="componentField" /></FormControl>
+        <FormMessage />
+      </FormItem>
+    </FormField>
 
-    <div v-if="error" class="md:col-span-2 text-sm text-destructive">{{ error }}</div>
+    <FormField v-slot="{ componentField }" name="type">
+      <FormItem>
+        <FormLabel>Type</FormLabel>
+        <FormControl><AppSelect v-bind="componentField" :options="liabilityTypeOptions" /></FormControl>
+        <FormMessage />
+      </FormItem>
+    </FormField>
+
+    <FormField v-slot="{ componentField }" name="startDate">
+      <FormItem>
+        <FormLabel>Start date <span class="text-destructive">*</span></FormLabel>
+        <FormControl><Input type="date" v-bind="componentField" /></FormControl>
+        <FormMessage />
+      </FormItem>
+    </FormField>
+
+    <FormField v-slot="{ componentField }" name="endDate">
+      <FormItem>
+        <FormLabel>End date</FormLabel>
+        <FormControl><Input type="date" v-bind="componentField" /></FormControl>
+        <FormMessage />
+      </FormItem>
+    </FormField>
+
+    <FormField v-if="!props.liability" v-slot="{ componentField }" name="initialBalance">
+      <FormItem>
+        <FormLabel>Initial balance</FormLabel>
+        <FormControl><Input type="number" step="0.01" v-bind="componentField" /></FormControl>
+        <FormMessage />
+      </FormItem>
+    </FormField>
+
+    <FormField v-slot="{ componentField }" name="growthType">
+      <FormItem>
+        <FormLabel>Interest type</FormLabel>
+        <FormControl><AppSelect v-bind="componentField" :options="growthTypeOptions" /></FormControl>
+        <FormMessage />
+      </FormItem>
+    </FormField>
+
+    <FormField v-slot="{ componentField }" name="rate">
+      <FormItem>
+        <FormLabel>Annual rate <span class="text-destructive">*</span></FormLabel>
+        <FormControl><Input type="number" step="0.0001" v-bind="componentField" /></FormControl>
+        <FormMessage />
+      </FormItem>
+    </FormField>
+
+    <FormField v-if="form.values.growthType === 'compounding'" v-slot="{ componentField }" name="compoundingFrequency">
+      <FormItem>
+        <FormLabel>Compounding frequency</FormLabel>
+        <FormControl><AppSelect v-bind="componentField" :options="frequencyOptions" /></FormControl>
+        <FormMessage />
+      </FormItem>
+    </FormField>
+
+    <FormField v-slot="{ componentField }" name="repayment">
+      <FormItem>
+        <FormLabel>Repayment amount <span class="text-destructive">*</span></FormLabel>
+        <FormControl><Input type="number" step="0.01" v-bind="componentField" /></FormControl>
+        <WarningChip v-for="w in warningsForField('repayment')" :key="w.code" :warning="w" />
+        <FormMessage />
+      </FormItem>
+    </FormField>
+
+    <FormField v-slot="{ componentField }" name="paymentFrequency">
+      <FormItem>
+        <FormLabel>Repayment frequency</FormLabel>
+        <FormControl><AppSelect v-bind="componentField" :options="frequencyOptions" /></FormControl>
+        <FormMessage />
+      </FormItem>
+    </FormField>
+
+    <FormField v-slot="{ componentField }" name="sourceAccountId">
+      <FormItem>
+        <FormLabel>Source account <span class="text-destructive">*</span></FormLabel>
+        <FormControl>
+          <AppSelect v-bind="componentField" :options="assetOptions" placeholder="— select —" />
+        </FormControl>
+        <WarningChip v-for="w in warningsForField('sourceAccountId')" :key="w.code" :warning="w" />
+        <FormMessage />
+      </FormItem>
+    </FormField>
+
+    <template v-if="form.values.type === 'credit_card'">
+      <FormField v-slot="{ componentField }" name="creditCardGracePeriodDays">
+        <FormItem>
+          <FormLabel>Grace period (days)</FormLabel>
+          <FormControl><Input type="number" min="0" v-bind="componentField" /></FormControl>
+          <FormMessage />
+        </FormItem>
+      </FormField>
+
+      <FormField v-slot="{ value, handleChange }" name="creditCardRevolving">
+        <FormItem>
+          <FormLabel>Revolving</FormLabel>
+          <FormControl>
+            <Checkbox :model-value="value" class="self-start" @update:model-value="handleChange" />
+          </FormControl>
+          <FormMessage />
+        </FormItem>
+      </FormField>
+    </template>
 
     <div class="md:col-span-2 flex gap-2 justify-end pt-2 border-t">
       <Button

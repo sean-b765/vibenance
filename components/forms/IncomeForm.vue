@@ -1,10 +1,20 @@
 <script setup lang="ts">
-import { computed, reactive, ref, watch } from 'vue'
+import { computed, watch } from 'vue'
+import { useForm } from 'vee-validate'
+import { toTypedSchema } from '@vee-validate/zod'
+import { toast } from 'vue-sonner'
 import { uuidv7 } from 'uuidv7'
+import { z } from 'zod'
 import AppSelect from '@/components/forms/AppSelect.vue'
-import FormRow from '@/components/forms/FormRow.vue'
 import { Button } from '@/components/ui/button'
 import { Checkbox } from '@/components/ui/checkbox'
+import {
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from '@/components/ui/form'
 import { Input } from '@/components/ui/input'
 import type { Asset } from '@/core/schemas/asset'
 import type { FrequencyKind } from '@/core/schemas/frequency'
@@ -36,118 +46,167 @@ const incomeTypeOptions = incomeTypes.map((t) => ({ value: t, label: t }))
 const frequencyOptions = frequencies.map((f) => ({ value: f, label: f }))
 const assetOptions = computed(() => props.assets.map((a) => ({ value: a.id, label: a.name })))
 
-type FormState = {
-  id: string
-  name: string
-  type: IncomeType
-  amount: number
-  pretax: boolean
-  destinationAccountId: string
-  frequency: FrequencyKind | 'one-off'
-  paymentDate: string
-  startDate: string
-  endDate: string
-}
+const formSchema = toTypedSchema(
+  z.object({
+    id: z.string().uuid(),
+    name: z.string().min(1, 'Name is required'),
+    type: z.enum(['wage', 'winnings', 'inheritance', 'rental', 'other']),
+    amount: z.coerce.number().min(0, 'Amount must be ≥ 0'),
+    pretax: z.boolean(),
+    destinationAccountId: z.string().uuid('Destination account is required'),
+    frequency: z.enum(['one-off', 'daily', 'weekly', 'fortnightly', 'monthly', 'annually']),
+    paymentDate: z.string().optional().default(''),
+    startDate: z.string().min(1, 'Start date is required'),
+    endDate: z.string().optional().default(''),
+  }),
+)
 
-const blank = (): FormState => ({
+const blank = () => ({
   id: uuidv7(),
   name: '',
-  type: 'wage',
+  type: 'wage' as IncomeType,
   amount: 0,
   pretax: true,
   destinationAccountId: '',
-  frequency: 'fortnightly',
+  frequency: 'fortnightly' as FrequencyKind | 'one-off',
   paymentDate: '',
   startDate: toDateInput(new Date().toISOString()),
   endDate: '',
 })
 
-const fromIncome = (i: Income): FormState => ({
+const fromIncome = (i: Income) => ({
   id: i.id,
   name: i.name,
   type: i.type,
   amount: i.amount,
   pretax: i.pretax,
   destinationAccountId: i.destinationAccountId,
-  frequency: i.frequency?.kind ?? 'one-off',
+  frequency: (i.frequency?.kind ?? 'one-off') as FrequencyKind | 'one-off',
   paymentDate: toDateInput(i.paymentDate),
   startDate: toDateInput(i.startDate),
   endDate: toDateInput(i.endDate),
 })
 
-const state = reactive<FormState>(props.income ? fromIncome(props.income) : blank())
+const form = useForm({
+  validationSchema: formSchema,
+  initialValues: props.income ? fromIncome(props.income) : blank(),
+})
+
 watch(
   () => props.income,
-  (i) => Object.assign(state, i ? fromIncome(i) : blank()),
+  (i) => form.resetForm({ values: i ? fromIncome(i) : blank() }),
 )
 
-const error = ref('')
+const onSubmit = form.handleSubmit(
+  (v) => {
+    const candidate: Income = {
+      id: v.id,
+      name: v.name.trim(),
+      type: v.type,
+      amount: Number(v.amount),
+      pretax: v.pretax,
+      destinationAccountId: v.destinationAccountId,
+      frequency: v.frequency === 'one-off' ? null : { kind: v.frequency },
+      startDate: requireDateInput(v.startDate),
+      tagIds: props.income?.tagIds ?? [],
+    }
+    const pay = fromDateInput(v.paymentDate)
+    if (pay) candidate.paymentDate = pay
+    const end = fromDateInput(v.endDate)
+    if (end) candidate.endDate = end
 
-const save = () => {
-  error.value = ''
-  const candidate: Income = {
-    id: state.id,
-    name: state.name.trim(),
-    type: state.type,
-    amount: Number(state.amount),
-    pretax: state.pretax,
-    destinationAccountId: state.destinationAccountId,
-    frequency: state.frequency === 'one-off' ? null : { kind: state.frequency },
-    startDate: requireDateInput(state.startDate),
-    tagIds: props.income?.tagIds ?? [],
-  }
-  const pay = fromDateInput(state.paymentDate)
-  if (pay) candidate.paymentDate = pay
-  const end = fromDateInput(state.endDate)
-  if (end) candidate.endDate = end
-
-  const parsed = incomeSchema.safeParse(candidate)
-  if (!parsed.success) {
-    error.value = parsed.error.issues[0]?.message ?? 'Invalid income'
-    return
-  }
-  emit('save', parsed.data)
-}
+    const parsed = incomeSchema.safeParse(candidate)
+    if (!parsed.success) {
+      const msg = parsed.error.issues[0]?.message ?? 'Invalid income'
+      toast.error(`Save failed: ${msg}`)
+      return
+    }
+    emit('save', parsed.data)
+  },
+  ({ errors }) => {
+    const msg = Object.values(errors)[0] ?? 'Invalid income'
+    toast.error(`Save failed: ${msg}`)
+  },
+)
 </script>
 
 <template>
-  <form
-    class="grid grid-cols-1 md:grid-cols-2 gap-4 p-4 bg-muted/40 rounded-md border"
-    @submit.prevent="save"
-  >
-    <FormRow label="Name">
-      <Input v-model="state.name" required />
-    </FormRow>
-    <FormRow label="Type">
-      <AppSelect v-model="state.type" :options="incomeTypeOptions" />
-    </FormRow>
-    <FormRow label="Amount per payment">
-      <Input v-model.number="state.amount" type="number" step="0.01" />
-    </FormRow>
-    <FormRow label="Pretax">
-      <Checkbox v-model="state.pretax" class="self-start" />
-    </FormRow>
-    <FormRow label="Frequency">
-      <AppSelect v-model="state.frequency" :options="frequencyOptions" />
-    </FormRow>
-    <FormRow label="Destination account">
-      <AppSelect
-        v-model="state.destinationAccountId"
-        :options="assetOptions"
-        placeholder="— select —"
-      />
-    </FormRow>
-    <FormRow label="Start date">
-      <Input v-model="state.startDate" type="date" />
-    </FormRow>
-    <FormRow label="End date (optional)">
-      <Input v-model="state.endDate" type="date" />
-    </FormRow>
-    <FormRow label="Payment date (optional)">
-      <Input v-model="state.paymentDate" type="date" />
-    </FormRow>
+  <form class="grid grid-cols-1 md:grid-cols-2 gap-4 p-4 bg-muted/40 rounded-md border" @submit="onSubmit">
+    <FormField v-slot="{ componentField }" name="name">
+      <FormItem>
+        <FormLabel>Name <span class="text-destructive">*</span></FormLabel>
+        <FormControl><Input v-bind="componentField" /></FormControl>
+        <FormMessage />
+      </FormItem>
+    </FormField>
 
-    <div v-if="error" class="md:col-span-2 text-sm text-destructive">{{ error }}</div>
+    <FormField v-slot="{ componentField }" name="type">
+      <FormItem>
+        <FormLabel>Type</FormLabel>
+        <FormControl><AppSelect v-bind="componentField" :options="incomeTypeOptions" /></FormControl>
+        <FormMessage />
+      </FormItem>
+    </FormField>
+
+    <FormField v-slot="{ componentField }" name="amount">
+      <FormItem>
+        <FormLabel>Amount per payment <span class="text-destructive">*</span></FormLabel>
+        <FormControl><Input type="number" step="0.01" v-bind="componentField" /></FormControl>
+        <FormMessage />
+      </FormItem>
+    </FormField>
+
+    <FormField v-slot="{ value, handleChange }" name="pretax">
+      <FormItem>
+        <FormLabel>Pretax</FormLabel>
+        <FormControl>
+          <Checkbox :model-value="value" class="self-start" @update:model-value="handleChange" />
+        </FormControl>
+        <FormMessage />
+      </FormItem>
+    </FormField>
+
+    <FormField v-slot="{ componentField }" name="frequency">
+      <FormItem>
+        <FormLabel>Frequency</FormLabel>
+        <FormControl><AppSelect v-bind="componentField" :options="frequencyOptions" /></FormControl>
+        <FormMessage />
+      </FormItem>
+    </FormField>
+
+    <FormField v-slot="{ componentField }" name="destinationAccountId">
+      <FormItem>
+        <FormLabel>Destination account <span class="text-destructive">*</span></FormLabel>
+        <FormControl>
+          <AppSelect v-bind="componentField" :options="assetOptions" placeholder="— select —" />
+        </FormControl>
+        <FormMessage />
+      </FormItem>
+    </FormField>
+
+    <FormField v-slot="{ componentField }" name="startDate">
+      <FormItem>
+        <FormLabel>Start date <span class="text-destructive">*</span></FormLabel>
+        <FormControl><Input type="date" v-bind="componentField" /></FormControl>
+        <FormMessage />
+      </FormItem>
+    </FormField>
+
+    <FormField v-slot="{ componentField }" name="endDate">
+      <FormItem>
+        <FormLabel>End date</FormLabel>
+        <FormControl><Input type="date" v-bind="componentField" /></FormControl>
+        <FormMessage />
+      </FormItem>
+    </FormField>
+
+    <FormField v-slot="{ componentField }" name="paymentDate">
+      <FormItem>
+        <FormLabel>Payment date</FormLabel>
+        <FormControl><Input type="date" v-bind="componentField" /></FormControl>
+        <FormMessage />
+      </FormItem>
+    </FormField>
 
     <div class="md:col-span-2 flex gap-2 justify-end pt-2 border-t">
       <Button

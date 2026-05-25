@@ -42,22 +42,22 @@ describe('InlineEdit', () => {
     wrapper.unmount()
   })
 
-  it('shows cancel (x) button in edit mode, not edit', async () => {
+  it('shows save button in edit mode, not edit', async () => {
     const wrapper = mountInline()
     await wrapper.find('button[aria-label="Edit"]').trigger('click')
     await nextTick()
-    expect(wrapper.find('button[aria-label="Cancel"]').exists()).toBe(true)
+    expect(wrapper.find('button[aria-label="Save"]').exists()).toBe(true)
     expect(wrapper.find('button[aria-label="Edit"]').exists()).toBe(false)
     wrapper.unmount()
   })
 
-  it('emits update:modelValue on blur with trimmed value', async () => {
+  it('emits update:modelValue on save with trimmed value', async () => {
     const wrapper = mountInline()
     await wrapper.find('button[aria-label="Edit"]').trigger('click')
     await nextTick()
     const input = wrapper.find('input')
     await input.setValue('  World  ')
-    await input.trigger('blur')
+    await wrapper.find('button[aria-label="Save"]').trigger('mousedown')
     await flushPromises()
     const emits = wrapper.emitted('update:modelValue') as unknown[][] | undefined
     expect(emits?.[emits.length - 1]?.[0]).toBe('World')
@@ -96,13 +96,13 @@ describe('InlineEdit', () => {
     wrapper.unmount()
   })
 
-  it('cancel button discards changes', async () => {
+  it('blur discards changes', async () => {
     const wrapper = mountInline()
     await wrapper.find('button[aria-label="Edit"]').trigger('click')
     await nextTick()
     const input = wrapper.find('input')
     await input.setValue('Discarded')
-    await wrapper.find('button[aria-label="Cancel"]').trigger('mousedown')
+    await input.trigger('blur')
     await flushPromises()
     expect(wrapper.emitted('update:modelValue')).toBeFalsy()
     expect(wrapper.find('input').exists()).toBe(false)

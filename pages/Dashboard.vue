@@ -132,13 +132,5 @@ const liabilityTotal = computed(() =>
       </CardContent>
     </Card>
 
-    <Card>
-      <CardHeader>
-        <CardTitle>Warnings</CardTitle>
-      </CardHeader>
-      <CardContent>
-        <p class="text-sm text-muted-foreground">No warnings.</p>
-      </CardContent>
-    </Card>
   </div>
 </template>
