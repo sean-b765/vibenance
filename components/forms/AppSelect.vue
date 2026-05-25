@@ -9,7 +9,7 @@ import {
 } from '@/components/ui/select'
 
 const props = defineProps<{
-  modelValue: T | ''
+  modelValue?: T | ''
   options: { value: T; label: string; colour?: string }[]
   placeholder?: string
 }>()

@@ -1,4 +1,3 @@
-import { z } from 'zod'
 import type { Asset } from '@/core/schemas/asset'
 import type { Expense } from '@/core/schemas/expense'
 import type { Frequency } from '@/core/schemas/frequency'
@@ -166,11 +165,3 @@ export const validateScenario = (scenario: Scenario): Warning[] => {
   return out
 }
 
-export const zodErrors = (issues: z.ZodIssue[]): Record<string, string> => {
-  const out: Record<string, string> = {}
-  for (const i of issues) {
-    const key = i.path.join('.')
-    if (!out[key]) out[key] = i.message
-  }
-  return out
-}

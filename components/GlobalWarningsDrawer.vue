@@ -34,7 +34,7 @@ const groups = computed<Group[]>(() => {
   if (name === 'scenarios') {
     return Object.entries(warningsStore.warningsByScenario)
       .map(([k, g]) => {
-        const scenarioName = scenarios.scenarios.find(s => s.id === k)?.name
+        const scenarioName = scenarios.scenarios.find(s => s.id === k)?.name ?? 'Scenario'
         return { scenarioId: k, scenarioName, warnings: g }
       })
   }

@@ -31,7 +31,7 @@
     "vue-echarts": "^7.0.3",
     "vue-router": "^5.0.4",
     "vue-sonner": "^2.0.9",
-    "zod": "^3.23.8"
+    "zod": "3.25.76"
   },
   "devDependencies": {
     "@biomejs/biome": "^1.9.4",
