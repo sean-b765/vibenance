@@ -71,7 +71,7 @@ const ENTITY_PALETTE = [
 const lines = computed(() => {
   if (!scenario.value) return []
   const main = {
-    name: scenario.value.name,
+    name: "Net Worth",
     colour: scenario.value.colour,
     points: series.value,
     area: true,
