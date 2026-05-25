@@ -67,7 +67,7 @@ const onSelect = (scenarioId: string, w: Warning) => {
   <Drawer v-if="totalCount > 0">
     <DrawerTrigger as-child>
       <Button
-        class="fixed bottom-6 right-6 z-50 gap-2 rounded-full shadow-lg bg-orange-500/10 hover:bg-orange-600/10 backdrop-blur-lg border border-orange-600/30 text-white"
+        class="fixed bottom-6 right-24 z-50 gap-2 rounded-full shadow-lg bg-orange-500/10 hover:bg-orange-600/10 backdrop-blur-lg border border-orange-600/30 text-white"
       >
         <AlertTriangle class="size-4" />
         {{ totalCount }} {{ totalCount === 1 ? 'warning' : 'warnings' }}

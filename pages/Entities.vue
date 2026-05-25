@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { Plus } from 'lucide-vue-next'
 import { computed, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import AppSelect from '@/components/forms/AppSelect.vue'
@@ -7,6 +8,7 @@ import ExpenseForm from '@/components/forms/ExpenseForm.vue'
 import IncomeForm from '@/components/forms/IncomeForm.vue'
 import LiabilityForm from '@/components/forms/LiabilityForm.vue'
 import MoveCloneBar from '@/components/forms/MoveCloneBar.vue'
+import RadialMenu, { type RadialMenuItem } from '@/components/RadialMenu.vue'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import type { Asset } from '@/core/schemas/asset'
@@ -136,6 +138,19 @@ const startSnapshot = (id: string) => {
   snapshotTargetId.value = snapshotTargetId.value === id ? null : id
   newSnapshotValue.value = ''
 }
+const quickItems = computed<RadialMenuItem[]>(() => [
+  {
+    tooltipText: 'Add',
+    icon: Plus,
+    items: [
+      { tooltipText: 'Asset', text: 'Asset', onSelect: () => openNew('asset') },
+      { tooltipText: 'Liability', text: 'Liability', onSelect: () => openNew('liability') },
+      { tooltipText: 'Income', text: 'Income', onSelect: () => openNew('income') },
+      { tooltipText: 'Expense', text: 'Expense', onSelect: () => openNew('expense') },
+    ],
+  },
+])
+
 const submitSnapshot = (kind: 'assets' | 'liabilities', id: string) => {
   if (!scenarioId.value) return
   const v = Number(newSnapshotValue.value)
@@ -313,5 +328,7 @@ const submitSnapshot = (kind: 'assets' | 'liabilities', id: string) => {
         <li v-if="expenses.length === 0" class="p-3 text-sm text-muted-foreground italic">No expenses.</li>
       </ul>
     </section>
+
+    <RadialMenu :items="quickItems" />
   </div>
 </template>

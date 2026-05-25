@@ -5,6 +5,7 @@ import { useRoute } from 'vue-router'
 import AppSelect from '@/components/forms/AppSelect.vue'
 import InlineEdit from '@/components/inputs/InlineEdit.vue'
 import NetWorthChart from '@/components/NetWorthChart.vue'
+import RadialMenu, { type RadialMenuItem } from '@/components/RadialMenu.vue'
 import { Button } from '@/components/ui/button'
 import type { BucketKind } from '@/core/engine/series'
 import { simulate } from '@/core/engine/simulation'
@@ -177,6 +178,47 @@ const onColourChange = (e: Event) => {
   const value = (e.target as HTMLInputElement).value
   scenarios.setColour(scenario.value.id, value)
 }
+
+const allEntityIds = computed<string[]>(() => {
+  if (!scenario.value) return []
+  const e = scenario.value.entities
+  return [
+    ...e.assets.map((x) => x.id),
+    ...e.liabilities.map((x) => x.id),
+    ...e.incomes.map((x) => x.id),
+    ...e.expenses.map((x) => x.id),
+    ...e.transfers.map((x) => x.id),
+  ]
+})
+const allEntitiesDisabled = computed(() =>
+  allEntityIds.value.length > 0 &&
+  allEntityIds.value.every((id) => disabledIds.value.has(id)),
+)
+const toggleAllEntities = () => {
+  if (allEntitiesDisabled.value) {
+    disabledIds.value = new Set()
+  } else {
+    disabledIds.value = new Set(allEntityIds.value)
+  }
+}
+
+const HORIZON_OPTIONS = [1, 3, 5, 10, 20, 30] as const
+const quickItems = computed<RadialMenuItem[]>(() => [
+  {
+    tooltipText: allEntitiesDisabled.value ? 'Show all entities' : 'Hide all entities',
+    icon: allEntitiesDisabled.value ? EyeOff : Eye,
+    onSelect: toggleAllEntities,
+  },
+  {
+    tooltipText: 'Edit horizon',
+    text: `${horizonYears.value}y`,
+    items: HORIZON_OPTIONS.map((y) => ({
+      tooltipText: `${y} year${y === 1 ? '' : 's'}`,
+      text: `${y}y`,
+      onSelect: () => { horizonYears.value = y },
+    })),
+  },
+])
 
 const expenseTotal = computed(() =>
   scenario.value
@@ -399,5 +441,7 @@ const expenseTotal = computed(() =>
         </tbody>
       </table>
     </section>
+
+    <RadialMenu :items="quickItems" />
   </div>
 </template>
