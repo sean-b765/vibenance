@@ -85,9 +85,6 @@ const liabilityTotal = computed(() =>
   <div v-else class="space-y-6">
     <header>
       <h2 class="text-2xl font-semibold">Dashboard</h2>
-      <p class="text-sm text-muted-foreground">
-        Active scenario: {{ scenarios.activeScenario?.name }}
-      </p>
     </header>
 
     <section class="grid grid-cols-1 md:grid-cols-3 gap-4">
