@@ -78,8 +78,9 @@ const option = computed(() => ({
   legend: {
     top: 0,
     textStyle: { fontSize: 12, color: axisColor.value },
+    icon: 'roundRect'
   },
-  grid: { left: 56, right: 16, top: 32, bottom: 56 },
+  grid: { left: 56, right: 16, top: 52, bottom: 66 },
   xAxis: {
     type: 'time',
     axisLine: { lineStyle: { color: splitColor.value } },
@@ -101,7 +102,22 @@ const option = computed(() => ({
   },
   dataZoom: [
     { type: 'inside' },
-    { type: 'slider', height: 24, bottom: 8 },
+    {
+      type: 'slider',
+      height: 24,
+      bottom: 8,
+      backgroundColor: 'rgba(0,0,0,0)',
+      borderColor: 'rgba(0,0,0,0)',
+      handleStyle: {
+        color: 'rgba(255,255,255,1)'
+      },
+      moveHandleSize: 1,
+      dataBackground: {
+        lineStyle: {
+          color: '#000'
+        }
+      }
+    },
   ],
   series: bucketed.value.map((l) => ({
     name: l.name,

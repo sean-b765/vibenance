@@ -4,6 +4,7 @@ import {
   formatCurrency,
   formatDate,
   formatPercent,
+  formatSignedPercent,
   setActiveCurrency,
 } from '@/utils/format'
 
@@ -78,6 +79,20 @@ describe('formatPercent', () => {
 
   it('handles values >= 1', () => {
     expect(formatPercent(1.5)).toBe('150.00%')
+  })
+})
+
+describe('formatSignedPercent', () => {
+  it('formats positive ratio with plus sign', () => {
+    expect(formatSignedPercent(2.0959)).toBe('+209.59%')
+  })
+
+  it('formats negative ratio with minus sign', () => {
+    expect(formatSignedPercent(-0.1234)).toBe('-12.34%')
+  })
+
+  it('formats zero with plus sign', () => {
+    expect(formatSignedPercent(0)).toBe('+0.00%')
   })
 })
 

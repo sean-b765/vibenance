@@ -6,12 +6,13 @@ import AppSelect from '@/components/forms/AppSelect.vue'
 import InlineEdit from '@/components/inputs/InlineEdit.vue'
 import NetWorthChart from '@/components/NetWorthChart.vue'
 import { Button } from '@/components/ui/button'
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
 import type { BucketKind } from '@/core/engine/series'
 import { simulate } from '@/core/engine/simulation'
 import type { Scenario } from '@/core/schemas/scenario'
 import { useScenariosStore } from '@/stores/scenarios'
 import { useWarningsStore } from '@/stores/warnings'
-import { formatCurrency, formatDate } from '@/utils/format'
+import { formatCurrency, formatDate, formatSignedPercent } from '@/utils/format'
 
 const route = useRoute()
 const scenarios = useScenariosStore()
@@ -121,6 +122,8 @@ type Row = {
   name: string
   kind: 'asset' | 'liability'
   value: number
+  currentValue: number
+  pctChange: number | null
 }
 
 const seriesById = computed(() => {
@@ -131,12 +134,15 @@ const seriesById = computed(() => {
 
 const buildRow = (id: string, name: string, kind: 'asset' | 'liability'): Row => {
   if (isDisabled(id) || !displayDate.value) {
-    return { id, name, kind, value: 0 }
+    return { id, name, kind, value: 0, currentValue: 0, pctChange: null }
   }
   const points = seriesById.value.get(id)
-  if (!points) return { id, name, kind, value: 0 }
+  if (!points) return { id, name, kind, value: 0, currentValue: 0, pctChange: null }
   const p = nearestPointValue(points, Date.parse(displayDate.value))
-  return { id, name, kind, value: p?.value ?? 0 }
+  const currentValue = points[0]?.value ?? 0
+  const value = p?.value ?? 0
+  const pctChange = currentValue !== 0 ? (value - currentValue) / Math.abs(currentValue) : null
+  return { id, name, kind, value, currentValue, pctChange }
 }
 
 const assetRows = computed<Row[]>(() =>
@@ -147,6 +153,24 @@ const liabilityRows = computed<Row[]>(() =>
 )
 const assetSum = computed(() => assetRows.value.reduce((s, r) => s + r.value, 0))
 const liabilitySum = computed(() => liabilityRows.value.reduce((s, r) => s + r.value, 0))
+const assetCurrentSum = computed(() => assetRows.value.reduce((s, r) => s + r.currentValue, 0))
+const liabilityCurrentSum = computed(() => liabilityRows.value.reduce((s, r) => s + r.currentValue, 0))
+const assetPctChange = computed(() =>
+  assetCurrentSum.value !== 0
+    ? (assetSum.value - assetCurrentSum.value) / Math.abs(assetCurrentSum.value)
+    : null,
+)
+const liabilityPctChange = computed(() =>
+  liabilityCurrentSum.value !== 0
+    ? (liabilitySum.value - liabilityCurrentSum.value) / Math.abs(liabilityCurrentSum.value)
+    : null,
+)
+const netCurrent = computed(() => assetCurrentSum.value - liabilityCurrentSum.value)
+const netPctChange = computed(() =>
+  netCurrent.value !== 0
+    ? (netWorthAtDisplay.value - netCurrent.value) / Math.abs(netCurrent.value)
+    : null,
+)
 
 const yearlyMultiplier = (kind: string | null | undefined): number => {
   switch (kind) {
@@ -191,19 +215,18 @@ const expenseTotal = computed(() =>
   <div v-if="!scenario" class="text-muted-foreground">Scenario not found.</div>
 
   <div v-else class="space-y-6">
-    <header class="flex items-center gap-3">
-      <label class="relative cursor-pointer" title="Change colour">
-        <span class="block w-5 h-5 rounded-full border border-border" :style="{ background: scenario.colour }" />
-        <input type="color" class="absolute inset-0 w-full h-full opacity-0 cursor-pointer" :value="scenario.colour"
-          @input="onColourChange" />
-      </label>
-      <InlineEdit :model-value="scenario.name" aria-label="Rename" label-class="text-2xl font-semibold"
-        input-class="text-2xl md:text-2xl font-semibold h-10" @update:model-value="onRename" />
-    </header>
 
-    <section class="p-6 bg-card rounded border border-border">
+    <section class="p-4 bg-card rounded border border-border">
       <div class="flex flex-wrap items-center justify-between gap-3 mb-4">
-        <h3 class="font-medium">Net worth projection</h3>
+        <div class="flex items-center gap-3">
+          <label class="relative cursor-pointer" title="Change colour">
+            <span class="block w-5 h-5 rounded-full border border-border" :style="{ background: scenario.colour }" />
+            <input type="color" class="absolute inset-0 w-full h-full opacity-0 cursor-pointer" :value="scenario.colour"
+              @input="onColourChange" />
+          </label>
+          <InlineEdit :model-value="scenario.name" aria-label="Rename" label-class="text-2xl font-semibold"
+            input-class="text-2xl md:text-2xl font-semibold h-10" @update:model-value="onRename" />
+        </div>
         <div class="flex items-center gap-4 text-xs">
           <div class="flex items-center gap-2">
             <span>Horizon</span>
@@ -239,7 +262,7 @@ const expenseTotal = computed(() =>
           <div class="font-semibold">{{ formatCurrency(endValue) }}</div>
         </div>
         <div>
-          <div class="text-xs uppercase text-muted-foreground">Delta</div>
+          <div class="text-xs uppercase text-muted-foreground">Change</div>
           <div class="font-semibold" :class="delta >= 0 ? 'text-emerald-600' : 'text-red-600'">
             {{ formatCurrency(delta) }}
           </div>
@@ -247,72 +270,171 @@ const expenseTotal = computed(() =>
       </div>
     </section>
 
-    <section class="p-6 bg-card rounded border border-border">
-      <div class="flex items-center justify-between mb-4">
-        <h3 class="font-medium">
-          Entity balances
-          <span class="text-xs text-muted-foreground font-normal ml-2">
-            at {{ displayDate ? formatDate(displayDate) : '—' }}
-            <span v-if="!hoverDate" class="ml-1">(end of horizon · hover graph to scrub)</span>
-          </span>
-        </h3>
-        <div class="text-sm font-semibold">
-          Net: <span :class="netWorthAtDisplay >= 0 ? 'text-emerald-600' : 'text-red-600'">
-            {{ formatCurrency(netWorthAtDisplay) }}
-          </span>
+    <section class="p-4 bg-card rounded border border-border">
+      <TooltipProvider :delay-duration="150">
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div>
+            <Tooltip>
+              <TooltipTrigger as-child>
+                <div class="flex items-center justify-between text-xs uppercase text-muted-foreground mb-2">
+                  <span>Assets ({{ assetRows.length }})</span>
+                  <span class="font-semibold">
+                    {{ formatCurrency(assetSum) }}
+                  </span>
+                </div>
+              </TooltipTrigger>
+              <TooltipContent>
+                <span v-if="assetPctChange === null || assetPctChange === 0" class="text-xs font-semibold">
+                  No Change
+                </span>
+                <template v-else>
+                <span class="text-xs font-semibold">
+                  {{ formatCurrency(assetCurrentSum) }} → {{ formatCurrency(assetSum) }}
+                </span>
+                <span
+                  :class="assetPctChange >= 0 ? 'text-emerald-600' : 'text-red-600'"
+                  class="text-xs ml-1 font-bold">
+                  {{ formatSignedPercent(assetPctChange) }}
+                </span>
+                </template>
+              </TooltipContent>
+            </Tooltip>
+            <table class="w-full text-sm">
+              <tbody class="divide-y">
+                <Tooltip v-for="r in assetRows" :key="r.id">
+                  <TooltipTrigger as-child>
+                    <tr :class="isDisabled(r.id) ? 'opacity-40' : ''">
+                      <td class="py-2 w-8">
+                        <Button variant="ghost" size="icon" class="size-7" @click="toggleDisabled(r.id)">
+                          <component :is="isDisabled(r.id) ? EyeOff : Eye" class="size-4" />
+                        </Button>
+                      </td>
+                      <td class="py-2">{{ r.name }}</td>
+                      <td class="py-2 text-right font-medium">
+                        {{ formatCurrency(r.value) }}
+                      </td>
+                    </tr>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <span v-if="r.pctChange === null || r.pctChange === 0" class="text-xs font-semibold">
+                      No Change
+                    </span>
+                    <template v-else>
+                    <span class="text-xs font-semibold">
+                      {{ formatCurrency(r.currentValue) }} → {{ formatCurrency(r.value) }}
+                    </span>
+                    <span
+                      :class="r.pctChange >= 0 ? 'text-emerald-600' : 'text-red-600'"
+                      class="text-xs ml-1 font-bold">
+                      {{ formatSignedPercent(r.pctChange) }}
+                    </span>
+                    </template>
+                  </TooltipContent>
+                </Tooltip>
+                <tr v-if="assetRows.length === 0">
+                  <td class="py-2 text-muted-foreground italic">No assets.</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          <div>
+            <Tooltip>
+              <TooltipTrigger as-child>
+                <div class="flex items-center justify-between text-xs uppercase text-muted-foreground mb-2">
+                  <span>Liabilities ({{ liabilityRows.length }})</span>
+                  <span class="font-semibold">
+                    {{ formatCurrency(liabilitySum) }}
+                  </span>
+                </div>
+                <TooltipContent>
+                  <span v-if="liabilityPctChange === null || liabilityPctChange === 0" class="text-xs font-semibold">
+                    No Change
+                  </span>
+                  <template v-else>
+                  <span class="text-xs font-semibold">
+                    {{ formatCurrency(liabilityCurrentSum) }} → {{ formatCurrency(liabilitySum) }}
+                  </span>
+                  <span
+                    :class="liabilityPctChange >= 0 ? 'text-emerald-600' : 'text-red-600'"
+                    class="text-xs ml-1 font-bold">
+                    {{ formatSignedPercent(liabilityPctChange) }}
+                  </span>
+                  </template>
+                </TooltipContent>
+              </TooltipTrigger>
+            </Tooltip>
+            <table class="w-full text-sm">
+              <tbody class="divide-y">
+                <Tooltip v-for="r in liabilityRows" :key="r.id">
+                  <TooltipTrigger as-child>
+                    <tr :class="isDisabled(r.id) ? 'opacity-40' : ''">
+                      <td class="py-2 w-8">
+                        <Button variant="ghost" size="icon" class="size-7" @click="toggleDisabled(r.id)">
+                          <component :is="isDisabled(r.id) ? EyeOff : Eye" class="size-4" />
+                        </Button>
+                      </td>
+                      <td class="py-2">{{ r.name }}</td>
+                      <td class="py-2 text-right font-medium">
+                        {{ formatCurrency(r.value) }}
+                      </td>
+                    </tr>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <span v-if="r.pctChange === null || r.pctChange === 0" class="text-xs font-semibold">
+                      No Change
+                    </span>
+                    <template v-else>
+                    <span class="text-xs font-semibold">
+                      {{ formatCurrency(r.currentValue) }} → {{ formatCurrency(r.value) }}
+                    </span>
+                    <span
+                      :class="r.pctChange >= 0 ? 'text-emerald-600' : 'text-red-600'"
+                      class="text-xs ml-1 font-bold">
+                      {{ formatSignedPercent(r.pctChange) }}
+                    </span>
+                    </template>
+                  </TooltipContent>
+                </Tooltip>
+                <tr v-if="liabilityRows.length === 0">
+                  <td class="py-2 text-muted-foreground italic">No liabilities.</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
         </div>
+      </TooltipProvider>
+
+      <!-- Net pos -->
+      <div class="flex items-center justify-end mt-3">
+        <Tooltip>
+          <TooltipTrigger as-child>
+            <div class="text-sm text-muted-foreground uppercase font-semibold">
+              Net:
+              <span>{{ formatCurrency(netWorthAtDisplay) }}</span>
+            </div>
+          </TooltipTrigger>
+          <TooltipContent>
+            <span v-if="netPctChange === null || netPctChange === 0">
+              No Change
+            </span>
+            <template v-else>
+              <span class="text-xs font-semibold">
+                {{ formatCurrency(netCurrent) }} → {{ formatCurrency(netWorthAtDisplay) }}
+              </span>
+              <span
+                :class="netPctChange >= 0 ? 'text-emerald-600' : 'text-red-600'"
+                class="text-xs ml-1 font-bold">
+                {{ formatSignedPercent(netPctChange) }}
+              </span>
+            </template>
+          </TooltipContent>
+        </Tooltip>
       </div>
 
-      <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <div>
-          <div class="flex items-center justify-between text-xs uppercase text-muted-foreground mb-2">
-            <span>Assets</span>
-            <span class="text-emerald-600 font-semibold">{{ formatCurrency(assetSum) }}</span>
-          </div>
-          <table class="w-full text-sm">
-            <tbody class="divide-y">
-              <tr v-for="r in assetRows" :key="r.id" :class="isDisabled(r.id) ? 'opacity-40' : ''">
-                <td class="py-2 w-8">
-                  <Button variant="ghost" size="icon" class="size-7" @click="toggleDisabled(r.id)">
-                    <component :is="isDisabled(r.id) ? EyeOff : Eye" class="size-4" />
-                  </Button>
-                </td>
-                <td class="py-2">{{ r.name }}</td>
-                <td class="py-2 text-right font-medium">{{ formatCurrency(r.value) }}</td>
-              </tr>
-              <tr v-if="assetRows.length === 0">
-                <td class="py-2 text-muted-foreground italic">No assets.</td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-        <div>
-          <div class="flex items-center justify-between text-xs uppercase text-muted-foreground mb-2">
-            <span>Liabilities</span>
-            <span class="text-red-600 font-semibold">{{ formatCurrency(liabilitySum) }}</span>
-          </div>
-          <table class="w-full text-sm">
-            <tbody class="divide-y">
-              <tr v-for="r in liabilityRows" :key="r.id" :class="isDisabled(r.id) ? 'opacity-40' : ''">
-                <td class="py-2 w-8">
-                  <Button variant="ghost" size="icon" class="size-7" @click="toggleDisabled(r.id)">
-                    <component :is="isDisabled(r.id) ? EyeOff : Eye" class="size-4" />
-                  </Button>
-                </td>
-                <td class="py-2">{{ r.name }}</td>
-                <td class="py-2 text-right font-medium">{{ formatCurrency(r.value) }}</td>
-              </tr>
-              <tr v-if="liabilityRows.length === 0">
-                <td class="py-2 text-muted-foreground italic">No liabilities.</td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-      </div>
     </section>
 
     <section class="grid grid-cols-1 md:grid-cols-2 gap-4">
-      <div class="p-4 bg-card rounded-md border">
+      <div class="p-4 bg-card rounded border">
         <div class="flex items-center justify-between text-xs uppercase text-muted-foreground mb-2">
           <span>Incomes ({{ scenario.entities.incomes.length }})</span>
           <span class="text-emerald-600 font-semibold">
@@ -333,7 +455,7 @@ const expenseTotal = computed(() =>
                   {{ i.type }} · {{ i.frequency?.kind ?? 'one-off' }}
                 </div>
               </td>
-              <td class="py-2 text-right font-medium text-emerald-600">
+              <td class="py-2 text-right font-medium">
                 +{{ formatCurrency(i.amount) }}
               </td>
             </tr>
@@ -343,7 +465,7 @@ const expenseTotal = computed(() =>
           </tbody>
         </table>
       </div>
-      <div class="p-4 bg-card rounded-md border">
+      <div class="p-4 bg-card rounded border">
         <div class="flex items-center justify-between text-xs uppercase text-muted-foreground mb-2">
           <span>Expenses ({{ scenario.entities.expenses.length }})</span>
           <span class="text-red-600 font-semibold">
@@ -364,7 +486,7 @@ const expenseTotal = computed(() =>
                   {{ e.type }} · {{ e.frequency?.kind ?? 'one-off' }}
                 </div>
               </td>
-              <td class="py-2 text-right font-medium text-red-600">
+              <td class="py-2 text-right font-medium">
                 -{{ formatCurrency(e.amount) }}
               </td>
             </tr>
@@ -376,7 +498,7 @@ const expenseTotal = computed(() =>
       </div>
     </section>
 
-    <section v-if="scenario.entities.transfers.length > 0" class="p-4 bg-card rounded-md border">
+    <section v-if="scenario.entities.transfers.length > 0" class="p-4 bg-card rounded border">
       <div class="text-xs uppercase text-muted-foreground mb-2">
         Transfers ({{ scenario.entities.transfers.length }})
       </div>

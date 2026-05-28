@@ -29,5 +29,11 @@ export const formatCompactCurrency = (value: number): string => compactFmt.forma
 
 export const formatPercent = (rate: number): string => `${(rate * 100).toFixed(2)}%`
 
+export const formatSignedPercent = (rate: number): string => {
+  const pct = rate * 100
+  const sign = pct < 0 ? '-' : '+'
+  return `${sign}${Math.abs(pct).toFixed(2)}%`
+}
+
 export const formatDate = (iso: string): string =>
   new Date(iso).toLocaleDateString(activeLocale, { day: '2-digit', month: 'short', year: 'numeric' })

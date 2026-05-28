@@ -226,7 +226,7 @@ const submitSnapshot = (kind: 'assets' | 'liabilities', id: string) => {
               <span class="flex-1 font-medium text-start">{{ l.name }}</span>
             </div>
             <span class="text-xs text-muted-foreground">{{ l.type }}</span>
-            <span class="text-sm font-mono text-red-600">
+            <span class="text-sm font-mono">
               {{ formatCurrency(lastSnapshotValue(l.snapshots) ?? 0) }}
             </span>
             <span class="text-muted-foreground">{{ expandedId === l.id ? '▾' : '▸' }}</span>
@@ -301,7 +301,7 @@ const submitSnapshot = (kind: 'assets' | 'liabilities', id: string) => {
               <span class="flex-1 font-medium text-start">{{ e.name }}</span>
             </div>
             <span class="text-xs text-muted-foreground">{{ e.type }} · {{ e.frequency?.kind ?? 'one-off' }}</span>
-            <span class="text-sm font-mono text-red-600">{{ formatCurrency(e.amount) }}</span>
+            <span class="text-sm font-mono">{{ formatCurrency(e.amount) }}</span>
             <span class="text-muted-foreground">{{ expandedId === e.id ? '▾' : '▸' }}</span>
           </Button>
           <div v-if="expandedId === e.id && scenarioId" class="p-3 space-y-3 border-t border-border">
