@@ -8,8 +8,14 @@ export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs))
 }
 
-export const entityRoute = (scenarioId: string, w: Warning): RouteLocationRaw => {
+export const entityRouteForWarning = (scenarioId: string, w: Warning): RouteLocationRaw => {
   const query: Record<string, string> = { scenario: scenarioId }
   if (w.entityType !== 'scenario') query.expand = w.entityId
+  return { name: 'entities', query }
+}
+
+export const entityRoute = (scenarioId: string, entityId?: string): RouteLocationRaw => {
+  const query: Record<string, string> = { scenario: scenarioId }
+  if (entityId) query.expand = entityId
   return { name: 'entities', query }
 }

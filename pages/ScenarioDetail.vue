@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { Eye, EyeOff } from 'lucide-vue-next'
 import { computed, ref } from 'vue'
-import { useRoute } from 'vue-router'
+import { RouterLink, useRoute } from 'vue-router'
 import AppSelect from '@/components/forms/AppSelect.vue'
 import InlineEdit from '@/components/inputs/InlineEdit.vue'
 import NetWorthChart from '@/components/NetWorthChart.vue'
@@ -13,6 +13,7 @@ import type { Scenario } from '@/core/schemas/scenario'
 import { useScenariosStore } from '@/stores/scenarios'
 import { useWarningsStore } from '@/stores/warnings'
 import { formatCurrency, formatDate, formatSignedPercent } from '@/utils/format'
+import { entityRoute } from '@/lib/utils'
 
 const route = useRoute()
 const scenarios = useScenariosStore()
@@ -307,7 +308,11 @@ const expenseTotal = computed(() =>
                       <component :is="isDisabled(r.id) ? EyeOff : Eye" class="size-4" />
                     </Button>
                   </td>
-                  <td class="py-2">{{ r.name }}</td>
+                  <td class="py-2">
+                    <RouterLink :to="entityRoute(scenario.id, r.id)">
+                      {{ r.name }}
+                    </RouterLink>
+                  </td>
                   <Tooltip>
                     <TooltipTrigger as-child>
                       <td class="py-2 text-right font-medium">
@@ -371,7 +376,11 @@ const expenseTotal = computed(() =>
                       <component :is="isDisabled(r.id) ? EyeOff : Eye" class="size-4" />
                     </Button>
                   </td>
-                  <td class="py-2">{{ r.name }}</td>
+                  <td class="py-2">
+                    <RouterLink :to="entityRoute(scenario.id, r.id)">
+                      {{ r.name }}
+                    </RouterLink>
+                  </td>
                   <Tooltip>
                     <TooltipTrigger as-child>
                       <td class="py-2 text-right font-medium">
@@ -450,7 +459,11 @@ const expenseTotal = computed(() =>
                 </Button>
               </td>
               <td class="py-2">
-                <div class="font-medium">{{ i.name }}</div>
+                <div class="font-medium">
+                  <RouterLink :to="entityRoute(scenario.id, i.id)">
+                    {{ i.name }}
+                  </RouterLink>
+                </div>
                 <div class="text-xs text-muted-foreground">
                   {{ i.type }} · {{ i.frequency?.kind ?? 'one-off' }}
                 </div>
@@ -481,7 +494,11 @@ const expenseTotal = computed(() =>
                 </Button>
               </td>
               <td class="py-2">
-                <div class="font-medium">{{ e.name }}</div>
+                <div class="font-medium">
+                  <RouterLink :to="entityRoute(scenario.id, e.id)">
+                    {{ e.name }}
+                  </RouterLink>
+                </div>
                 <div class="text-xs text-muted-foreground">
                   {{ e.type }} · {{ e.frequency?.kind ?? 'one-off' }}
                 </div>

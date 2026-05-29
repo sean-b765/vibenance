@@ -15,7 +15,7 @@ import {
 import type { Warning } from '@/core/validation/warnings'
 import { useScenariosStore } from '@/stores/scenarios'
 import { useWarningsStore } from '@/stores/warnings'
-import { entityRoute } from '@/lib/utils'
+import { entityRouteForWarning } from '@/lib/utils'
 
 const route = useRoute()
 const router = useRouter()
@@ -59,7 +59,7 @@ const groups = computed<Group[]>(() => {
 const totalCount = computed(() => groups.value.reduce((n, g) => n + g.warnings.length, 0))
 
 const onSelect = (scenarioId: string, w: Warning) => {
-  router.push(entityRoute(scenarioId, w))
+  router.push(entityRouteForWarning(scenarioId, w))
 }
 </script>
 
