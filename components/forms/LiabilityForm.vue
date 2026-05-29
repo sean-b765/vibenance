@@ -1,11 +1,12 @@
 <script setup lang="ts">
-import { computed, watch } from 'vue'
+import { computed, ref, watch } from 'vue'
 import { useForm } from 'vee-validate'
 import { toTypedSchema } from '@vee-validate/zod'
 import { toast } from 'vue-sonner'
 import { uuidv7 } from 'uuidv7'
 import { z } from 'zod'
 import AppSelect from '@/components/forms/AppSelect.vue'
+import VariableRatesDrawer from '@/components/forms/VariableRatesDrawer.vue'
 import WarningChip from '@/components/WarningChip.vue'
 import { Button } from '@/components/ui/button'
 import { Checkbox } from '@/components/ui/checkbox'
@@ -17,8 +18,10 @@ import {
   FormMessage,
 } from '@/components/ui/form'
 import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
 import type { Asset } from '@/core/schemas/asset'
 import type { FrequencyKind } from '@/core/schemas/frequency'
+import type { RatePeriod } from '@/core/schemas/growth'
 import { liabilitySchema, type Liability, type LiabilityType } from '@/core/schemas/liability'
 import { checkLiability, type Warning } from '@/core/validation/warnings'
 import { fromDateInput, requireDateInput, toDateInput } from '@/utils/dateInput'
@@ -103,9 +106,14 @@ const form = useForm({
   initialValues: props.liability ? fromLiability(props.liability) : blank(),
 })
 
+const variableRates = ref<RatePeriod[]>(props.liability?.interest.variableRates ?? [])
+
 watch(
   () => props.liability,
-  (l) => form.resetForm({ values: l ? fromLiability(l) : blank() }),
+  (l) => {
+    form.resetForm({ values: l ? fromLiability(l) : blank() })
+    variableRates.value = l?.interest.variableRates ?? []
+  },
 )
 
 const buildCandidate = (v: ReturnType<typeof blank>): Liability => {
@@ -126,6 +134,7 @@ const buildCandidate = (v: ReturnType<typeof blank>): Liability => {
       ...(v.growthType === 'compounding'
         ? { compoundingFrequency: { kind: v.compoundingFrequency } }
         : {}),
+      ...(variableRates.value.length > 0 ? { variableRates: variableRates.value } : {}),
     },
     repayment: Number(v.repayment),
     paymentFrequency: { kind: v.paymentFrequency },
@@ -239,6 +248,11 @@ const onSubmit = form.handleSubmit(
         <FormMessage />
       </FormItem>
     </FormField>
+
+    <div class="md:col-span-2 flex flex-col gap-2">
+      <Label>Variable rates</Label>
+      <VariableRatesDrawer v-model="variableRates" />
+    </div>
 
     <FormField v-slot="{ componentField }" name="repayment">
       <FormItem>

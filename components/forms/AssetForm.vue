@@ -1,11 +1,12 @@
 <script setup lang="ts">
-import { computed, watch } from 'vue'
+import { computed, ref, watch } from 'vue'
 import { useForm } from 'vee-validate'
 import { toTypedSchema } from '@vee-validate/zod'
 import { toast } from 'vue-sonner'
 import { uuidv7 } from 'uuidv7'
 import { z } from 'zod'
 import AppSelect from '@/components/forms/AppSelect.vue'
+import VariableRatesDrawer from '@/components/forms/VariableRatesDrawer.vue'
 import WarningChip from '@/components/WarningChip.vue'
 import { Button } from '@/components/ui/button'
 import {
@@ -16,8 +17,10 @@ import {
   FormMessage,
 } from '@/components/ui/form'
 import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
 import { assetSchema, type Asset, type AssetType } from '@/core/schemas/asset'
 import type { FrequencyKind } from '@/core/schemas/frequency'
+import type { RatePeriod } from '@/core/schemas/growth'
 import type { Liability } from '@/core/schemas/liability'
 import { checkAsset, type Warning } from '@/core/validation/warnings'
 import { fromDateInput, requireDateInput, toDateInput } from '@/utils/dateInput'
@@ -106,9 +109,14 @@ const form = useForm({
   initialValues: props.asset ? fromAsset(props.asset) : blank(),
 })
 
+const variableRates = ref<RatePeriod[]>(props.asset?.growth.variableRates ?? [])
+
 watch(
   () => props.asset,
-  (a) => form.resetForm({ values: a ? fromAsset(a) : blank() }),
+  (a) => {
+    form.resetForm({ values: a ? fromAsset(a) : blank() })
+    variableRates.value = a?.growth.variableRates ?? []
+  },
 )
 
 const buildCandidate = (v: ReturnType<typeof blank>): Asset => {
@@ -129,6 +137,7 @@ const buildCandidate = (v: ReturnType<typeof blank>): Asset => {
       ...(v.growthType === 'compounding'
         ? { compoundingFrequency: { kind: v.compoundingFrequency } }
         : {}),
+      ...(variableRates.value.length > 0 ? { variableRates: variableRates.value } : {}),
     },
     tagIds: existing?.tagIds ?? [],
   }
@@ -248,6 +257,11 @@ const onSubmit = form.handleSubmit(
         <FormMessage />
       </FormItem>
     </FormField>
+
+    <div class="md:col-span-2 flex flex-col gap-2">
+      <Label>Variable rates</Label>
+      <VariableRatesDrawer v-model="variableRates" />
+    </div>
 
     <FormField v-if="form.values.type === 'account_offset'" v-slot="{ componentField }" name="linkedLiabilityId">
       <FormItem>
