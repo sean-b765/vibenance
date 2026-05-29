@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { Eye, EyeOff } from 'lucide-vue-next'
 import { computed, ref } from 'vue'
-import { useRoute } from 'vue-router'
+import { RouterLink, useRoute } from 'vue-router'
 import AppSelect from '@/components/forms/AppSelect.vue'
 import InlineEdit from '@/components/inputs/InlineEdit.vue'
 import NetWorthChart from '@/components/NetWorthChart.vue'
@@ -13,6 +13,7 @@ import type { Scenario } from '@/core/schemas/scenario'
 import { useScenariosStore } from '@/stores/scenarios'
 import { useWarningsStore } from '@/stores/warnings'
 import { formatCurrency, formatDate, formatSignedPercent } from '@/utils/format'
+import { entityRoute } from '@/lib/utils'
 
 const route = useRoute()
 const scenarios = useScenariosStore()
@@ -274,63 +275,67 @@ const expenseTotal = computed(() =>
       <TooltipProvider :delay-duration="150">
         <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
-            <Tooltip>
-              <TooltipTrigger as-child>
-                <div class="flex items-center justify-between text-xs uppercase text-muted-foreground mb-2">
-                  <span>Assets ({{ assetRows.length }})</span>
+            <div class="flex items-center justify-between text-xs uppercase text-muted-foreground mb-2">
+              <span>Assets ({{ assetRows.length }})</span>
+              <Tooltip>
+                <TooltipTrigger as-child>
                   <span class="font-semibold">
                     {{ formatCurrency(assetSum) }}
                   </span>
-                </div>
-              </TooltipTrigger>
-              <TooltipContent>
-                <span v-if="assetPctChange === null || assetPctChange === 0" class="text-xs font-semibold">
-                  No Change
-                </span>
-                <template v-else>
-                <span class="text-xs font-semibold">
-                  {{ formatCurrency(assetCurrentSum) }} → {{ formatCurrency(assetSum) }}
-                </span>
-                <span
-                  :class="assetPctChange >= 0 ? 'text-emerald-600' : 'text-red-600'"
-                  class="text-xs ml-1 font-bold">
-                  {{ formatSignedPercent(assetPctChange) }}
-                </span>
-                </template>
-              </TooltipContent>
-            </Tooltip>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <span v-if="assetPctChange === null || assetPctChange === 0" class="text-xs font-semibold">
+                    No Change
+                  </span>
+                  <template v-else>
+                  <span class="text-xs font-semibold">
+                    {{ formatCurrency(assetCurrentSum) }} → {{ formatCurrency(assetSum) }}
+                  </span>
+                  <span
+                    :class="assetPctChange >= 0 ? 'text-emerald-600' : 'text-red-600'"
+                    class="text-xs ml-1 font-bold">
+                    {{ formatSignedPercent(assetPctChange) }}
+                  </span>
+                  </template>
+                </TooltipContent>
+              </Tooltip>
+            </div>
             <table class="w-full text-sm">
               <tbody class="divide-y">
-                <Tooltip v-for="r in assetRows" :key="r.id">
-                  <TooltipTrigger as-child>
-                    <tr :class="isDisabled(r.id) ? 'opacity-40' : ''">
-                      <td class="py-2 w-8">
-                        <Button variant="ghost" size="icon" class="size-7" @click="toggleDisabled(r.id)">
-                          <component :is="isDisabled(r.id) ? EyeOff : Eye" class="size-4" />
-                        </Button>
-                      </td>
-                      <td class="py-2">{{ r.name }}</td>
+                <tr v-for="r in assetRows" :key="r.id" :class="isDisabled(r.id) ? 'opacity-40' : ''">
+                  <td class="py-2 w-8">
+                    <Button variant="ghost" size="icon" class="size-7" @click="toggleDisabled(r.id)">
+                      <component :is="isDisabled(r.id) ? EyeOff : Eye" class="size-4" />
+                    </Button>
+                  </td>
+                  <td class="py-2">
+                    <RouterLink :to="entityRoute(scenario.id, r.id)">
+                      {{ r.name }}
+                    </RouterLink>
+                  </td>
+                  <Tooltip>
+                    <TooltipTrigger as-child>
                       <td class="py-2 text-right font-medium">
                         {{ formatCurrency(r.value) }}
                       </td>
-                    </tr>
-                  </TooltipTrigger>
-                  <TooltipContent>
-                    <span v-if="r.pctChange === null || r.pctChange === 0" class="text-xs font-semibold">
-                      No Change
-                    </span>
-                    <template v-else>
-                    <span class="text-xs font-semibold">
-                      {{ formatCurrency(r.currentValue) }} → {{ formatCurrency(r.value) }}
-                    </span>
-                    <span
-                      :class="r.pctChange >= 0 ? 'text-emerald-600' : 'text-red-600'"
-                      class="text-xs ml-1 font-bold">
-                      {{ formatSignedPercent(r.pctChange) }}
-                    </span>
-                    </template>
-                  </TooltipContent>
-                </Tooltip>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <span v-if="r.pctChange === null || r.pctChange === 0" class="text-xs font-semibold">
+                        No Change
+                      </span>
+                      <template v-else>
+                      <span class="text-xs font-semibold">
+                        {{ formatCurrency(r.currentValue) }} → {{ formatCurrency(r.value) }}
+                      </span>
+                      <span
+                        :class="r.pctChange >= 0 ? 'text-emerald-600' : 'text-red-600'"
+                        class="text-xs ml-1 font-bold">
+                        {{ formatSignedPercent(r.pctChange) }}
+                      </span>
+                      </template>
+                    </TooltipContent>
+                  </Tooltip>
+                </tr>
                 <tr v-if="assetRows.length === 0">
                   <td class="py-2 text-muted-foreground italic">No assets.</td>
                 </tr>
@@ -338,14 +343,14 @@ const expenseTotal = computed(() =>
             </table>
           </div>
           <div>
-            <Tooltip>
-              <TooltipTrigger as-child>
-                <div class="flex items-center justify-between text-xs uppercase text-muted-foreground mb-2">
-                  <span>Liabilities ({{ liabilityRows.length }})</span>
+            <div class="flex items-center justify-between text-xs uppercase text-muted-foreground mb-2">
+              <span>Liabilities ({{ liabilityRows.length }})</span>
+              <Tooltip>
+                <TooltipTrigger as-child>
                   <span class="font-semibold">
                     {{ formatCurrency(liabilitySum) }}
                   </span>
-                </div>
+                </TooltipTrigger>
                 <TooltipContent>
                   <span v-if="liabilityPctChange === null || liabilityPctChange === 0" class="text-xs font-semibold">
                     No Change
@@ -361,40 +366,44 @@ const expenseTotal = computed(() =>
                   </span>
                   </template>
                 </TooltipContent>
-              </TooltipTrigger>
-            </Tooltip>
+              </Tooltip>
+            </div>
             <table class="w-full text-sm">
               <tbody class="divide-y">
-                <Tooltip v-for="r in liabilityRows" :key="r.id">
-                  <TooltipTrigger as-child>
-                    <tr :class="isDisabled(r.id) ? 'opacity-40' : ''">
-                      <td class="py-2 w-8">
-                        <Button variant="ghost" size="icon" class="size-7" @click="toggleDisabled(r.id)">
-                          <component :is="isDisabled(r.id) ? EyeOff : Eye" class="size-4" />
-                        </Button>
-                      </td>
-                      <td class="py-2">{{ r.name }}</td>
+                <tr v-for="r in liabilityRows" :key="r.id" :class="isDisabled(r.id) ? 'opacity-40' : ''">
+                  <td class="py-2 w-8">
+                    <Button variant="ghost" size="icon" class="size-7" @click="toggleDisabled(r.id)">
+                      <component :is="isDisabled(r.id) ? EyeOff : Eye" class="size-4" />
+                    </Button>
+                  </td>
+                  <td class="py-2">
+                    <RouterLink :to="entityRoute(scenario.id, r.id)">
+                      {{ r.name }}
+                    </RouterLink>
+                  </td>
+                  <Tooltip>
+                    <TooltipTrigger as-child>
                       <td class="py-2 text-right font-medium">
                         {{ formatCurrency(r.value) }}
                       </td>
-                    </tr>
-                  </TooltipTrigger>
-                  <TooltipContent>
-                    <span v-if="r.pctChange === null || r.pctChange === 0" class="text-xs font-semibold">
-                      No Change
-                    </span>
-                    <template v-else>
-                    <span class="text-xs font-semibold">
-                      {{ formatCurrency(r.currentValue) }} → {{ formatCurrency(r.value) }}
-                    </span>
-                    <span
-                      :class="r.pctChange >= 0 ? 'text-emerald-600' : 'text-red-600'"
-                      class="text-xs ml-1 font-bold">
-                      {{ formatSignedPercent(r.pctChange) }}
-                    </span>
-                    </template>
-                  </TooltipContent>
-                </Tooltip>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <span v-if="r.pctChange === null || r.pctChange === 0" class="text-xs font-semibold">
+                        No Change
+                      </span>
+                      <template v-else>
+                      <span class="text-xs font-semibold">
+                        {{ formatCurrency(r.currentValue) }} → {{ formatCurrency(r.value) }}
+                      </span>
+                      <span
+                        :class="r.pctChange >= 0 ? 'text-emerald-600' : 'text-red-600'"
+                        class="text-xs ml-1 font-bold">
+                        {{ formatSignedPercent(r.pctChange) }}
+                      </span>
+                      </template>
+                    </TooltipContent>
+                  </Tooltip>
+                </tr>
                 <tr v-if="liabilityRows.length === 0">
                   <td class="py-2 text-muted-foreground italic">No liabilities.</td>
                 </tr>
@@ -450,7 +459,11 @@ const expenseTotal = computed(() =>
                 </Button>
               </td>
               <td class="py-2">
-                <div class="font-medium">{{ i.name }}</div>
+                <div class="font-medium">
+                  <RouterLink :to="entityRoute(scenario.id, i.id)">
+                    {{ i.name }}
+                  </RouterLink>
+                </div>
                 <div class="text-xs text-muted-foreground">
                   {{ i.type }} · {{ i.frequency?.kind ?? 'one-off' }}
                 </div>
@@ -481,7 +494,11 @@ const expenseTotal = computed(() =>
                 </Button>
               </td>
               <td class="py-2">
-                <div class="font-medium">{{ e.name }}</div>
+                <div class="font-medium">
+                  <RouterLink :to="entityRoute(scenario.id, e.id)">
+                    {{ e.name }}
+                  </RouterLink>
+                </div>
                 <div class="text-xs text-muted-foreground">
                   {{ e.type }} · {{ e.frequency?.kind ?? 'one-off' }}
                 </div>
