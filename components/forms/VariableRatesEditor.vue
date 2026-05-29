@@ -24,11 +24,6 @@ const dialogOpen = computed({
 
 const emitUpdate = (next: RatePeriod[]) => emit('update:modelValue', next)
 
-const onAdd = () => {
-  const today = new Date().toISOString()
-  emitUpdate([...props.modelValue, { startDate: today, rate: 0 }])
-}
-
 const requestRemove = (index: number) => {
   pendingRemoveIndex.value = index
 }
@@ -106,17 +101,6 @@ const onRate = (index: number, value: string | number) => {
         Remove
       </Button>
     </div>
-
-    <Button
-      type="button"
-      variant="outline"
-      size="sm"
-      class="self-start"
-      data-testid="add-rate"
-      @click="onAdd"
-    >
-      Add variable rate
-    </Button>
 
     <ConfirmationDialog
       v-model:open="dialogOpen"

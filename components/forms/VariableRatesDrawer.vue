@@ -31,6 +31,11 @@ const triggerLabel = computed(() =>
 )
 
 const onUpdate = (value: RatePeriod[]) => emit('update:modelValue', value)
+
+const onAdd = () => {
+  const today = new Date().toISOString()
+  emit('update:modelValue', [...props.modelValue, { startDate: today, rate: 0 }])
+}
 </script>
 
 <template>
@@ -51,9 +56,19 @@ const onUpdate = (value: RatePeriod[]) => emit('update:modelValue', value)
       <div class="px-4 pb-4 overflow-y-auto">
         <VariableRatesEditor :model-value="props.modelValue" @update:model-value="onUpdate" />
       </div>
-      <DrawerFooter>
+      <DrawerFooter class="flex-row">
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          class="self-start"
+          data-testid="add-rate"
+          @click="onAdd"
+        >
+          Add variable rate
+        </Button>
         <DrawerClose as-child>
-          <Button type="button" size="sm">Done</Button>
+          <Button class="flex-1" type="button" size="sm">Done</Button>
         </DrawerClose>
       </DrawerFooter>
     </DrawerContent>
