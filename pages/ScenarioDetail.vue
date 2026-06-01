@@ -11,10 +11,9 @@ import type { BucketKind } from '@/core/engine/series'
 import { simulate } from '@/core/engine/simulation'
 import type { Scenario } from '@/core/schemas/scenario'
 import { useScenariosStore } from '@/stores/scenarios'
-import { formatCurrency, formatSignedPercent } from '@/utils/format'
+import { formatCompactCurrency, formatCurrency, formatSignedPercent } from '@/utils/format'
 import { entityRoute } from '@/lib/utils'
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group'
-import { Label } from '@/components/ui/label'
 
 const route = useRoute()
 const scenarios = useScenariosStore()
@@ -230,7 +229,6 @@ const expenseTotal = computed(() =>
         </div>
         <div class="flex justify-end items-end gap-4 text-xs">
           <div class="min-w-[100px]">
-            <Label class="mb-1">Horizon</Label>
             <AppSelect :model-value="horizonYears" :options="[
               { value: 1, label: '1 yr' },
               { value: 3, label: '3 yr' },
@@ -241,7 +239,7 @@ const expenseTotal = computed(() =>
             ]" @update:model-value="(v) => horizonYears = Number(v) || 5" />
           </div>
           <div class="flex gap-1">
-            <ToggleGroup v-model:model-value="bucketKind" type="single" required size="sm">
+            <ToggleGroup v-model:model-value="bucketKind" type="single" required>
               <ToggleGroupItem
                 v-for="b in (['day', 'week', 'month']) as const"
                 :key="b"
@@ -262,16 +260,16 @@ const expenseTotal = computed(() =>
       <div class="grid grid-cols-3 gap-4 mt-4 text-sm">
         <div>
           <div class="text-xs uppercase text-muted-foreground">Start</div>
-          <div class="font-semibold">{{ formatCurrency(startValue) }}</div>
+          <div class="font-semibold">{{ formatCompactCurrency(startValue) }}</div>
         </div>
         <div>
           <div class="text-xs uppercase text-muted-foreground">End</div>
-          <div class="font-semibold">{{ formatCurrency(endValue) }}</div>
+          <div class="font-semibold">{{ formatCompactCurrency(endValue) }}</div>
         </div>
         <div>
           <div class="text-xs uppercase text-muted-foreground">Change</div>
           <div class="font-semibold" :class="delta >= 0 ? 'text-emerald-600' : 'text-red-600'">
-            {{ formatCurrency(delta) }}
+            {{ formatCompactCurrency(delta) }}
           </div>
         </div>
       </div>
