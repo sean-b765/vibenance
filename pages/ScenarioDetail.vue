@@ -241,12 +241,15 @@ const expenseTotal = computed(() =>
             ]" @update:model-value="(v) => horizonYears = Number(v) || 5" />
           </div>
           <div class="flex gap-1">
-            <ToggleGroup v-model:model-value="bucketKind" type="single">
+            <ToggleGroup v-model:model-value="bucketKind" type="single" required size="sm">
               <ToggleGroupItem
                 v-for="b in (['day', 'week', 'month']) as const"
                 :key="b"
                 :value="b"
-                variant="outline">
+                :style="{ 'pointer-events': b === bucketKind ? 'none' : 'auto' }"
+                variant="outline"
+                @keydown.space="(e: KeyboardEvent) => b === bucketKind ? e.preventDefault() : undefined"
+                @keydown.enter="(e: KeyboardEvent) => b === bucketKind ? e.preventDefault() : undefined">
                 {{ b }}
               </ToggleGroupItem>
             </ToggleGroup>

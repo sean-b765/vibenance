@@ -6,7 +6,6 @@ import type { BucketKind, SeriesPoint } from '@/core/engine/series'
 import { bucket } from '@/core/engine/series'
 import { registerEcharts } from '@/utils/echarts'
 import { formatCompactCurrency, formatCurrency, formatDate } from '@/utils/format'
-import { P } from 'vue-router/dist/useApi-D6ckOsFy.js'
 
 registerEcharts()
 
