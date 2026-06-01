@@ -11,13 +11,13 @@ import type { BucketKind } from '@/core/engine/series'
 import { simulate } from '@/core/engine/simulation'
 import type { Scenario } from '@/core/schemas/scenario'
 import { useScenariosStore } from '@/stores/scenarios'
-import { useWarningsStore } from '@/stores/warnings'
-import { formatCurrency, formatDate, formatSignedPercent } from '@/utils/format'
+import { formatCurrency, formatSignedPercent } from '@/utils/format'
 import { entityRoute } from '@/lib/utils'
+import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group'
+import { Label } from '@/components/ui/label'
 
 const route = useRoute()
 const scenarios = useScenariosStore()
-const warningsStore = useWarningsStore()
 
 const bucketKind = ref<BucketKind>('month')
 const horizonYears = ref<number>(5)
@@ -228,25 +228,28 @@ const expenseTotal = computed(() =>
           <InlineEdit :model-value="scenario.name" aria-label="Rename" label-class="text-2xl font-semibold"
             input-class="text-2xl md:text-2xl font-semibold h-10" @update:model-value="onRename" />
         </div>
-        <div class="flex items-center gap-4 text-xs">
-          <div class="flex items-center gap-2">
-            <span>Horizon</span>
-            <div class="min-w-[100px]">
-              <AppSelect :model-value="horizonYears" :options="[
-                { value: 1, label: '1 yr' },
-                { value: 3, label: '3 yr' },
-                { value: 5, label: '5 yr' },
-                { value: 10, label: '10 yr' },
-                { value: 20, label: '20 yr' },
-                { value: 30, label: '30 yr' },
-              ]" @update:model-value="(v) => horizonYears = Number(v) || 5" />
-            </div>
+        <div class="flex justify-end items-end gap-4 text-xs">
+          <div class="min-w-[100px]">
+            <Label class="mb-1">Horizon</Label>
+            <AppSelect :model-value="horizonYears" :options="[
+              { value: 1, label: '1 yr' },
+              { value: 3, label: '3 yr' },
+              { value: 5, label: '5 yr' },
+              { value: 10, label: '10 yr' },
+              { value: 20, label: '20 yr' },
+              { value: 30, label: '30 yr' },
+            ]" @update:model-value="(v) => horizonYears = Number(v) || 5" />
           </div>
           <div class="flex gap-1">
-            <Button v-for="b in (['day', 'week', 'month'] as const)" :key="b" size="sm"
-              :variant="bucketKind === b ? 'default' : 'outline'" @click="bucketKind = b">
-              {{ b }}
-            </Button>
+            <ToggleGroup v-model:model-value="bucketKind" type="single">
+              <ToggleGroupItem
+                v-for="b in (['day', 'week', 'month']) as const"
+                :key="b"
+                :value="b"
+                variant="outline">
+                {{ b }}
+              </ToggleGroupItem>
+            </ToggleGroup>
           </div>
         </div>
       </div>

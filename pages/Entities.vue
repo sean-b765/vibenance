@@ -162,7 +162,7 @@ const submitSnapshot = (kind: 'assets' | 'liabilities', id: string) => {
             :options="scenarios.scenarios.map((s) => ({ value: s.id, label: s.name, colour: s.colour }))"
             placeholder="Scenario" @update:model-value="(v) => v && scenarios.setActive(String(v))" />
         </div>
-        <Input v-model="filter" placeholder="Filter by name" class="w-72" />
+        <Input v-model="filter" placeholder="Filter by name" class="hidden md:block w-72" />
       </div>
     </header>
 

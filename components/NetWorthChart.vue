@@ -6,6 +6,7 @@ import type { BucketKind, SeriesPoint } from '@/core/engine/series'
 import { bucket } from '@/core/engine/series'
 import { registerEcharts } from '@/utils/echarts'
 import { formatCompactCurrency, formatCurrency, formatDate } from '@/utils/format'
+import { P } from 'vue-router/dist/useApi-D6ckOsFy.js'
 
 registerEcharts()
 
@@ -80,7 +81,7 @@ const option = computed(() => ({
     textStyle: { fontSize: 12, color: axisColor.value },
     icon: 'roundRect'
   },
-  grid: { left: 56, right: 16, top: 52, bottom: 66 },
+  grid: { left: 46, right: 46, top: 52, bottom: 66 },
   xAxis: {
     type: 'time',
     axisLine: { lineStyle: { color: splitColor.value } },
@@ -131,6 +132,44 @@ const option = computed(() => ({
     ...(l.area ? { areaStyle: { color: l.colour, opacity: 0.25 } } : {}),
     data: l.points.map((p) => [p.date, p.value]),
   })),
+  media: [
+    {
+      query: { maxWidth: 640 },
+      option: {
+        grid: { left: 20, right: 20, top: 52, bottom: 110 },
+        yAxis: {
+          axisLabel: {
+            rotate: -90
+          }
+        },
+        xAxis: {
+          axisLabel: {
+            rotate: -60
+          }
+        },
+        dataZoom: [
+          { type: 'inside' },
+          {
+            type: 'slider',
+            height: 10,
+            bottom: 10,
+            handleSize: '0%',
+            backgroundColor: 'rgba(0,0,0,0)',
+            borderColor: 'rgba(0,0,0,0)',
+            handleStyle: {
+              color: 'rgba(255,255,255,1)'
+            },
+            moveHandleSize: 0,
+            dataBackground: {
+              lineStyle: {
+                color: '#000'
+              }
+            }
+          },
+        ],
+      }
+    },
+  ]
 }))
 </script>
 
