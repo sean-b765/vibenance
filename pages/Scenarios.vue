@@ -4,14 +4,28 @@ import { RouterLink } from 'vue-router'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { useScenariosStore } from '@/stores/scenarios'
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu'
+import { Ellipsis } from 'lucide-vue-next'
+import ConfirmationDialog from '@/components/ConfirmationDialog.vue'
 
 const scenarios = useScenariosStore()
 const newName = ref('')
+const deleteConfirmationOpen = ref(false)
+const selectedMenuId = ref<string | undefined>(undefined)
+const confirmDelete = () => {
+  if (!selectedMenuId.value) return
+
+  scenarios.remove(selectedMenuId.value)
+}
 
 const createScenario = () => {
 	const name = newName.value.trim()
-	if (!name) return
-	scenarios.create(name)
+	scenarios.create(name || 'New Scenario')
 	newName.value = ''
 }
 </script>
@@ -23,6 +37,7 @@ const createScenario = () => {
 			<div class="flex gap-2">
 				<Input
 					v-model="newName"
+          class="hidden sm:block"
 					placeholder="New scenario name"
 					@keyup.enter="createScenario"
 				/>
@@ -53,26 +68,58 @@ const createScenario = () => {
 						{{ (s.inflationRate * 100).toFixed(1) }}%
 					</div>
 				</div>
+        <DropdownMenu>
+          <DropdownMenuTrigger class="block sm:hidden">
+            <Button size="sm" variant="outline">
+              <Ellipsis />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent>
+            <DropdownMenuItem @click="scenarios.toggleFavourite(s.id)">
+					    {{ s.favourite ? '★ Favourite' : '☆ Favourite' }}
+            </DropdownMenuItem>
+            <DropdownMenuItem @click="scenarios.duplicate(s.id)">
+              Duplicate
+            </DropdownMenuItem>
+            <DropdownMenuItem class="text-destructive hover:text-destructive" @click="selectedMenuId = s.id; deleteConfirmationOpen = true">
+              Delete
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
+        
 				<Button
+          class="hidden sm:block"
 					size="sm"
 					variant="ghost"
 					@click="scenarios.toggleFavourite(s.id)"
 				>
 					{{ s.favourite ? '★ Favourite' : '☆ Favourite' }}
 				</Button>
-				<Button size="sm" variant="ghost" @click="scenarios.duplicate(s.id)"
-					>Duplicate</Button
-				>
+				<Button
+          class="hidden sm:block"
+          size="sm"
+          variant="ghost"
+          @click="scenarios.duplicate(s.id)">
+          Duplicate
+        </Button>
 				<Button
 					v-if="s.name !== 'Base'"
 					size="sm"
 					variant="ghost"
-					class="text-destructive hover:text-destructive"
-					@click="scenarios.remove(s.id)"
+					class="hidden sm:block text-destructive hover:text-destructive"
+					@click="selectedMenuId = s.id; deleteConfirmationOpen = true"
 				>
 					Delete
 				</Button>
 			</li>
 		</ul>
 	</div>
+
+  <ConfirmationDialog
+    v-model:open="deleteConfirmationOpen"
+    title="Delete Scenario?"
+    description="This will delete the scenario. Are you sure?"
+    confirm-label="Delete"
+    @confirm="confirmDelete"
+  />
 </template>

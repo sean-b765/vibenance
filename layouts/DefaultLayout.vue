@@ -19,7 +19,7 @@ import {
         <Separator orientation="vertical" class="mr-2 h-4" />
         <span class="text-sm text-muted-foreground">Personal Finance Modelling</span>
       </header>
-      <main class="flex-1 p-6 overflow-auto">
+      <main class="flex-1 p-3 sm:p-6 overflow-auto">
         <RouterView />
       </main>
     </SidebarInset>

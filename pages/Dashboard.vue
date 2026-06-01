@@ -9,7 +9,7 @@ import { parseBundle } from '@/core/io/json'
 import { useScenariosStore } from '@/stores/scenarios'
 import { useSettingsStore } from '@/stores/settings'
 import { useTagsStore } from '@/stores/tags'
-import { formatCurrency } from '@/utils/format'
+import { formatCompactCurrency, formatCurrency } from '@/utils/format'
 
 const scenarios = useScenariosStore()
 const tags = useTagsStore()
@@ -93,7 +93,8 @@ const liabilityTotal = computed(() =>
           <CardTitle class="text-xs uppercase text-muted-foreground font-medium">Net worth</CardTitle>
         </CardHeader>
         <CardContent>
-          <div class="text-3xl font-semibold">{{ formatCurrency(netWorth) }}</div>
+          <div class="block sm:hidden text-3xl font-semibold">{{ formatCompactCurrency(netWorth) }}</div>
+          <div class="hidden sm:block text-3xl font-semibold">{{ formatCurrency(netWorth) }}</div>
         </CardContent>
       </Card>
       <Card>
@@ -101,7 +102,8 @@ const liabilityTotal = computed(() =>
           <CardTitle class="text-xs uppercase text-muted-foreground font-medium">Assets</CardTitle>
         </CardHeader>
         <CardContent>
-          <div class="text-2xl font-semibold text-emerald-600">{{ formatCurrency(assetTotal) }}</div>
+          <div class="block sm:hidden text-2xl font-semibold text-emerald-600">{{ formatCompactCurrency(assetTotal) }}</div>
+          <div class="hidden sm:block text-2xl font-semibold text-emerald-600">{{ formatCurrency(assetTotal) }}</div>
         </CardContent>
       </Card>
       <Card>
@@ -109,7 +111,8 @@ const liabilityTotal = computed(() =>
           <CardTitle class="text-xs uppercase text-muted-foreground font-medium">Liabilities</CardTitle>
         </CardHeader>
         <CardContent>
-          <div class="text-2xl font-semibold text-red-600">{{ formatCurrency(liabilityTotal) }}</div>
+          <div class="block sm:hidden text-2xl font-semibold text-red-600">{{ formatCompactCurrency(liabilityTotal) }}</div>
+          <div class="hidden sm:block text-2xl font-semibold text-red-600">{{ formatCurrency(liabilityTotal) }}</div>
         </CardContent>
       </Card>
     </section>

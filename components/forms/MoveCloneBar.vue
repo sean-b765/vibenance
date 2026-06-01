@@ -41,7 +41,9 @@ const clone = () => {
     <div class="flex-1 min-w-[180px]">
       <AppSelect v-model="target" :options="targetOptions" placeholder="— select scenario —" />
     </div>
-    <Button size="sm" variant="outline" :disabled="!target" @click="clone">Clone</Button>
-    <Button size="sm" :disabled="!target" @click="move">Move</Button>
+    <div>
+      <Button size="sm" variant="outline" :disabled="!target" class="mr-2" @click="clone">Clone</Button>
+      <Button size="sm" :disabled="!target" @click="move">Move</Button>
+    </div>
   </div>
 </template>

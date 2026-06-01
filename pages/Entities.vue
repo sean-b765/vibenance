@@ -23,17 +23,6 @@ const warningsStore = useWarningsStore()
 const route = useRoute()
 const router = useRouter()
 
-const warningsByEntity = computed<Record<string, Warning[]>>(() => {
-  const out: Record<string, Warning[]> = {}
-  for (const w of warningsStore.activeScenarioWarnings) {
-    if (w.entityType === 'scenario') continue
-    if (!out[w.entityId]) out[w.entityId] = []
-    out[w.entityId]!.push(w)
-  }
-  return out
-})
-const warningsFor = (id: string): Warning[] => warningsByEntity.value[id] ?? []
-
 const expandedId = ref<string | null>(null)
 
 const applyQuery = () => {
@@ -162,7 +151,7 @@ const submitSnapshot = (kind: 'assets' | 'liabilities', id: string) => {
             :options="scenarios.scenarios.map((s) => ({ value: s.id, label: s.name, colour: s.colour }))"
             placeholder="Scenario" @update:model-value="(v) => v && scenarios.setActive(String(v))" />
         </div>
-        <Input v-model="filter" placeholder="Filter by name" class="w-72" />
+        <Input v-model="filter" placeholder="Filter by name" class="hidden md:block w-72" />
       </div>
     </header>
 
@@ -192,9 +181,14 @@ const submitSnapshot = (kind: 'assets' | 'liabilities', id: string) => {
             <AssetForm :asset="a" :liabilities="allLiabilities" @save="saveAsset" @cancel="expandedId = null"
               @delete="removeAsset" />
             <MoveCloneBar :from-scenario-id="scenarioId" :entity-id="a.id" kind="assets" />
-            <div class="flex items-center gap-2 p-3 bg-card rounded-md border">
+            <div class="flex flex-wrap items-center gap-2 p-3 bg-card rounded-md border">
               <span class="text-xs uppercase text-muted-foreground">Log balance update</span>
-              <Input v-model="newSnapshotValue" type="number" step="0.01" placeholder="New balance" class="flex-1"
+              <Input
+                v-model="newSnapshotValue"
+                type="number"
+                step="0.01"
+                placeholder="New balance"
+                class="flex-1 min-w-[180px]"
                 @focus="startSnapshot(a.id)" />
               <Button size="sm" variant="outline" :disabled="snapshotTargetId !== a.id || newSnapshotValue === ''"
                 @click="submitSnapshot('assets', a.id)">
@@ -235,9 +229,14 @@ const submitSnapshot = (kind: 'assets' | 'liabilities', id: string) => {
             <LiabilityForm :liability="l" :assets="allAssets" @save="saveLiability" @cancel="expandedId = null"
               @delete="removeLiability" />
             <MoveCloneBar :from-scenario-id="scenarioId" :entity-id="l.id" kind="liabilities" />
-            <div class="flex items-center gap-2 p-3 bg-card rounded-md border">
+            <div class="flex flex-wrap items-center gap-2 p-3 bg-card rounded-md border">
               <span class="text-xs uppercase text-muted-foreground">Log balance update</span>
-              <Input v-model="newSnapshotValue" type="number" step="0.01" placeholder="New balance" class="flex-1"
+              <Input
+                v-model="newSnapshotValue"
+                type="number"
+                step="0.01"
+                placeholder="New balance"
+                class="flex-1 min-w-[180px]"
                 @focus="startSnapshot(l.id)" />
               <Button size="sm" variant="outline" :disabled="snapshotTargetId !== l.id || newSnapshotValue === ''"
                 @click="submitSnapshot('liabilities', l.id)">
