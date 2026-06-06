@@ -9,6 +9,10 @@ on:
 env:
   AWS_REGION: ap-southeast-2
 
+permissions:
+  contents: read
+  id-token: write
+
 jobs:
   build_deploy:
     name: Build and deploy
