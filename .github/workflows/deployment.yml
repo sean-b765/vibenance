@@ -36,8 +36,9 @@ jobs:
 
     - name: Install and build
       run: |
-        npm ci
-        npm run build-only
+        npm install -g pnpm@latest-11
+        pnpm i
+        pnpm build-only
 
     - name: Upload to S3
       run: |
