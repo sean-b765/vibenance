@@ -37,7 +37,7 @@ jobs:
     - name: Install and build
       run: |
         npm install -g pnpm@latest-11
-        pnpm i
+        pnpm i --frozen-lockfile
         pnpm build-only
 
     - name: Upload to S3
