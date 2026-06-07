@@ -40,7 +40,9 @@ jobs:
 
     - name: Upload to S3
       run: |
-        aws s3 cp ./dist/ s3://${{ secrets.BUCKET_NAME }} --recursive
+        aws s3 cp ./dist/index.html s3://${{ secrets.BUCKET_NAME }}/index.html --cache-control "no-cache"
+        aws s3 cp ./dist/favicon.ico s3://${{ secrets.BUCKET_NAME }}/favicon.ico --cache-control "public,max-age=86400,immutable"
+        aws s3 cp ./dist/assets/ s3://${{ secrets.BUCKET_NAME }}/assets/ --recursive --cache-control "public,max-age=31536000,immutable"
 
     - name: Invalidate CloudFront
       run: |
